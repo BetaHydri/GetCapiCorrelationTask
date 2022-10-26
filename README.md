@@ -3,6 +3,7 @@ In the CAPI2 Log there is sometimes the need to output all CAPI2 events in seque
 
 PARAMETER <b>TaskID</b><br />
 'This mandatory TaskID must be obtained from one sequece of the events'
+<details>
 <summary>     
 EXAMPLES
 </summary>
