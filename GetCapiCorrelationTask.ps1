@@ -44,7 +44,7 @@ Function Get-CapiTaskIDEvents {
     .SYNOPSIS
         In the CAPI2 Log there is sometimes the need to output all CAPI2 events in sequence that are written from a specific application or process. This function and its helper function can be used to filter those Events based on the TaskID  
           
-    .PARAMETER TskID
+    .PARAMETER TaskID
         This mandatory TaskID must be obtained from one sequece of the events 
      
     .EXAMPLE
