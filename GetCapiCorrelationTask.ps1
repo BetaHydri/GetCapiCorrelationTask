@@ -35,8 +35,10 @@
 <# 
 
 .DESCRIPTION 
- Gets the Capi Operational Logs based on the same CorrleationID e.g. TaskID 
+ Gets the Capi Operational Logs based on the same CorreleationID e.g. TaskID 
 
+.EXAMPLE
+    Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
 #> 
 
 Function Get-CapiTaskIDEvents {
@@ -49,7 +51,8 @@ Function Get-CapiTaskIDEvents {
      
     .EXAMPLE
         Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
-
+    
+    .OUTPUTS
         TimeCreated     : 10/25/2022 3:48:50 PM
         ID              : 10
         RecordType      : Informationen
