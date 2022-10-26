@@ -254,7 +254,7 @@ Function Get-CapiTaskIDEvents {
                           /><Result value="80092013">Die Sperrfunktion konnte die Sperrung nicht überprüfen, da der Sperrserver offline
                           war.</Result></CertGetCertificateChain>
 #>
-  [CmdletBinding()]
+  [CmdletBinding(DefaultParameterSetName="Default")]
   param (
     [Parameter(Mandatory = $true,
     ValueFromPipeline = $true,
@@ -390,9 +390,4 @@ Function Convert-EventLogRecord {
   } #end
 }
 
-Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
-
-
-
-
-
+#Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
