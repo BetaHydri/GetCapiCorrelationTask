@@ -3,7 +3,7 @@
 
 .VERSION 1.0
 
-.GUID 5be41ca7-f004-4b0a-802a-b8c70e2dff52
+.GUID 3228f1cd-8cca-4839-b9aa-7c93c83a917e
 
 .AUTHOR Jan Tiedemann
 
@@ -11,7 +11,7 @@
 
 .COPYRIGHT GNU
 
-.TAGS CAPI2, Eventlog, Correlation
+.TAGS
 
 .LICENSEURI
 
@@ -37,9 +37,9 @@
 .DESCRIPTION 
  Gets the Capi Operational Logs based on the same CorreleationID e.g. TaskID 
 
-.EXAMPLE
-    Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
 #> 
+
+#Param()
 
 Function Get-CapiTaskIDEvents {
   <#
@@ -290,6 +290,33 @@ Function Get-CapiTaskIDEvents {
     }
 }
 
+Function Search-InUserData {
+    [CmdletBinding(DefaultParameterSetName="Default")]
+    param (
+      [Parameter(Mandatory = $true,
+      ValueFromPipeline = $true,
+      ValueFromPipelineByPropertyName = $true)]
+      [string]
+      $Searchstring,
+      [Parameter(Mandatory = $false,
+      ValueFromPipeline = $true,
+      ValueFromPipelineByPropertyName = $true)]
+      [string]
+      $LogName='Microsoft-Windows-CAPI2/Operational'
+    )
+    Begin {
+        Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
+    } #begin
+
+    Process {
+        $Events = Get-WinEvent -LogName $LogName | Convert-EventLogRecord
+        $Result = $Events | ForEach-Object {
+            select-xml -Content $(convertto-xml $_.UserData).InnerXml -XPath "//Certificate[SubjectName="$Searchstring"]" | ForEach-Object {$_.node}
+            Return $Result
+        }
+    }
+}
+
 Function Convert-EventLogRecord {
 
   [cmdletbinding()]
@@ -392,5 +419,6 @@ Function Convert-EventLogRecord {
       Write-Verbose "[END    ] Ending: $($MyInvocation.Mycommand)"
   } #end
 }
-
+$found = Search-InUserData -Searchstring "*.wns.windows.com"
+Write-Host $found
 #Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
