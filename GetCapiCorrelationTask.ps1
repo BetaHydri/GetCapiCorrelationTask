@@ -42,7 +42,7 @@
 #Param()
 
 Function Get-CapiTaskIDEvents {
-  <#
+    <#
     .SYNOPSIS
         In the CAPI2 Log there is sometimes the need to output all CAPI2 events in sequence that are written from a specific application or process. This function and its helper function can be used to filter those Events based on the TaskID  
           
@@ -257,16 +257,16 @@ Function Get-CapiTaskIDEvents {
                           /><Result value="80092013">Die Sperrfunktion konnte die Sperrung nicht überprüfen, da der Sperrserver offline
                           war.</Result></CertGetCertificateChain>
 #>
-  [CmdletBinding(DefaultParameterSetName="Default")]
-  param (
-    [Parameter(Mandatory = $true,
-    ValueFromPipeline = $true,
-    ValueFromPipelineByPropertyName = $true)]
-    [string]
-    $TaskID
-  )
+    [CmdletBinding(DefaultParameterSetName = "Default")]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [string]
+        $TaskID
+    )
     try {
-      $Query = "*[UserData[CertVerifyCertificateChainPolicy[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or 
+        $Query = "*[UserData[CertVerifyCertificateChainPolicy[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or 
       *[UserData[CertGetCertificateChain[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
       *[UserData[CertGetCertificateChainStart[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
       *[UserData[X509Objects[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
@@ -276,14 +276,14 @@ Function Get-CapiTaskIDEvents {
       *[UserData[CryptRetrieveObjectByUrlCache[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
       *[UserData[CryptRetrieveObjectByUrlCacheStart[CorrelationAuxInfo[@TaskId='{$TaskID}']]]]"
 
-    $Events = Get-WinEvent -FilterXPath $Query -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N='DetailedMessage'; E={($_.UserData)}}| Sort-Object -Property TimeCreated 
-    if ($null -ne $Events) {
-        Return $Events
-    }
-    else {
-        Write-Host "No Capi2 Event were found with the CorrelationID $TaskID" -ForegroundColor Yellow
-        exit
-    }
+        $Events = Get-WinEvent -FilterXPath $Query -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { ($_.UserData) } } | Sort-Object -Property TimeCreated 
+        if ($null -ne $Events) {
+            Return $Events
+        }
+        else {
+            Write-Host "No Capi2 Event were found with the CorrelationID $TaskID" -ForegroundColor Yellow
+            exit
+        }
     }
     Catch {
         Write-Warning -Message $_.Exception.Message
@@ -291,18 +291,18 @@ Function Get-CapiTaskIDEvents {
 }
 
 Function Search-InUserData {
-    [CmdletBinding(DefaultParameterSetName="Default")]
+    [CmdletBinding(DefaultParameterSetName = "Default")]
     param (
-      [Parameter(Mandatory = $true,
-      ValueFromPipeline = $true,
-      ValueFromPipelineByPropertyName = $true)]
-      [string]
-      $Searchstring,
-      [Parameter(Mandatory = $false,
-      ValueFromPipeline = $true,
-      ValueFromPipelineByPropertyName = $true)]
-      [string]
-      $LogName='Microsoft-Windows-CAPI2/Operational'
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [string]
+        $Searchstring,
+        [Parameter(Mandatory = $false,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [string]
+        $LogName = 'Microsoft-Windows-CAPI2/Operational'
     )
     Begin {
         Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
@@ -311,7 +311,7 @@ Function Search-InUserData {
     Process {
         $Events = Get-WinEvent -LogName $LogName | Convert-EventLogRecord
         $Result = $Events | ForEach-Object {
-            select-xml -Content $(convertto-xml $_.UserData).InnerXml -XPath "//Certificate[SubjectName="$Searchstring"]" | ForEach-Object {$_.node}
+            Select-Xml -Content $(ConvertTo-Xml $_.UserData).InnerXml -XPath "//Certificate[SubjectName="$Searchstring"]" | ForEach-Object { $_.node }
             Return $Result
         }
     }
@@ -319,105 +319,105 @@ Function Search-InUserData {
 
 Function Convert-EventLogRecord {
 
-  [cmdletbinding()]
-  [alias("clr")]
+    [cmdletbinding()]
+    [alias("clr")]
 
-  Param(
-      [Parameter(Position = 0, Mandatory, ValueFromPipeline)]
-      [ValidateNotNullorEmpty()]
-      [System.Diagnostics.Eventing.Reader.EventLogRecord[]]$LogRecord
-  )
+    Param(
+        [Parameter(Position = 0, Mandatory, ValueFromPipeline)]
+        [ValidateNotNullorEmpty()]
+        [System.Diagnostics.Eventing.Reader.EventLogRecord[]]$LogRecord
+    )
 
-  Begin {
-      Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
-  } #begin
+    Begin {
+        Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
+    } #begin
 
-  Process {
-      foreach ($record in $LogRecord) {
-          Write-Verbose "[PROCESS] Processing event id $($record.ID) from $($record.logname) log on $($record.machinename)"
-          Write-Verbose "[PROCESS] Creating XML data"
-          [xml]$r = $record.ToXml()
+    Process {
+        foreach ($record in $LogRecord) {
+            Write-Verbose "[PROCESS] Processing event id $($record.ID) from $($record.logname) log on $($record.machinename)"
+            Write-Verbose "[PROCESS] Creating XML data"
+            [xml]$r = $record.ToXml()
 
-          $h = [ordered]@{
-              LogName     = $record.LogName
-              RecordType  = $record.LevelDisplayName
-              TimeCreated = $record.TimeCreated
-              ID          = $record.Id
-          }
+            $h = [ordered]@{
+                LogName     = $record.LogName
+                RecordType  = $record.LevelDisplayName
+                TimeCreated = $record.TimeCreated
+                ID          = $record.Id
+            }
 
-          if ($r.Event.UserData.Count -gt 0) {
-              Write-Verbose "[PROCESS] Parsing event data"
-              if ($r.Event.UserData -is [array]) {
-              <#
+            if ($r.Event.UserData.HasChildnodes) {
+                Write-Verbose "[PROCESS] Parsing event data"
+                if ($r.Event.UserData -is [array]) {
+                    <#
                I only want to enumerate with the For loop if the data is an array of objects
                If the data is just a single string like Foo, then when using the For loop,
                the data value will be the F and not the complete string, Foo.
                #>
-              for ($i = 0; $i -lt $r.Event.UserData.count; $i++) {
+                    for ($i = 0; $i -lt $r.Event.UserData.count; $i++) {
 
-                  $data = $r.Event.UserData[$i]
-                  #test if there is structured data or just text
-                  if ($data.name) {
-                      $Name = $data.name
-                      $Value = $data.'#text'
-                  }
-                  else {
-                      Write-Verbose "[PROCESS] No data property name detected"
-                      $Name = "RawProperties"
-                      #data will likely be an array of strings
-                      [string[]]$Value = $data
-                  }
+                        $data = $r.Event.UserData[$i]
+                        #test if there is structured data or just text
+                        if ($data.name) {
+                            $Name = $data.name
+                            $Value = $data.'#text'
+                        }
+                        else {
+                            Write-Verbose "[PROCESS] No data property name detected"
+                            $Name = "RawProperties"
+                            #data will likely be an array of strings
+                            [string[]]$Value = $data
+                        }
 
-                  if ($h.Contains("RawProperties")) {
-                      Write-Verbose "[PROCESS] Appending to RawProperties"
-                      $h.RawProperties += $value
-                  }
-                  else {
-                      Write-Verbose "[PROCESS] Adding $name"
-                      $h.add($name, $Value)
-                  }
-              } #for data
-              } #data is an array
-              else {
-                  $data = $r.Event.UserData
-                  if ($data.name) {
-                      $Name = $data.name
-                      $Value = $data.InnerXml
-                  }
-                  else {
-                      Write-Verbose "[PROCESS] No data property name detected"
-                      $Name = "RawProperties"
-                      #data will likely be an array of strings
-                      [string[]]$Value = $data
-                  }
+                        if ($h.Contains("RawProperties")) {
+                            Write-Verbose "[PROCESS] Appending to RawProperties"
+                            $h.RawProperties += $value
+                        }
+                        else {
+                            Write-Verbose "[PROCESS] Adding $name"
+                            $h.add($name, $Value)
+                        }
+                    } #for data
+                } #data is an array
+                else {
+                    $data = $r.Event.UserData
+                    if ($data.name) {
+                        $Name = $data.name
+                        $Value = $data.InnerXml
+                    }
+                    else {
+                        Write-Verbose "[PROCESS] No data property name detected"
+                        $Name = "RawProperties"
+                        #data will likely be an array of strings
+                        [string[]]$Value = $data
+                    }
 
-                  if ($h.Contains("RawProperties")) {
-                      Write-Verbose "[PROCESS] Appending to RawProperties"
-                      $h.RawProperties += $value
-                  }
-                  else {
-                      Write-Verbose "[PROCESS] Adding $name"
-                      $h.add($name, $Value)
-                  }
-              }
-          } #if data
-          else {
-              Write-Verbose "[PROCESS] No event data to process"
-          }
+                    if ($h.Contains("RawProperties")) {
+                        Write-Verbose "[PROCESS] Appending to RawProperties"
+                        $h.RawProperties += $value
+                    }
+                    else {
+                        Write-Verbose "[PROCESS] Adding $name"
+                        $h.add($name, $Value)
+                    }
+                }
+            } #if data
+            else {
+                Write-Verbose "[PROCESS] No event data to process"
+            }
 
-          $h.Add("Message", $record.Message)
-          $h.Add("Keywords", $record.KeywordsDisplayNames)
-          $h.Add("Source", $record.ProviderName)
-          $h.Add("Computername", $record.MachineName)
+            $h.Add("Message", $record.Message)
+            $h.Add("Keywords", $record.KeywordsDisplayNames)
+            $h.Add("Source", $record.ProviderName)
+            $h.Add("Computername", $record.MachineName)
 
-          Write-Verbose "[PROCESS] Creating custom object"
-          New-Object -TypeName PSObject -Property $h
-      } #foreach record
-  } #process
+            Write-Verbose "[PROCESS] Creating custom object"
+            New-Object -TypeName PSObject -Property $h
+        } #foreach record
+    } #process
 
-  End {
-      Write-Verbose "[END    ] Ending: $($MyInvocation.Mycommand)"
-  } #end
+    End {
+        Write-Verbose "[END    ] Ending: $($MyInvocation.Mycommand)"
+    } #end
 }
 $found = Search-InUserData -Searchstring "*.wns.windows.com"
 Write-Host $found
