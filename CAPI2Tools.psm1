@@ -92,6 +92,14 @@ $Script:CAPI2ErrorCodes = @{
         Resolution  = 'Verify certificate is installed, check certificate store'
         Severity    = 'Error'
     }
+    'FBF' = @{
+        Code        = 'FBF'
+        HexCode     = 'CERT_E_CHAINING'
+        Description = 'A certificate chain could not be built to a trusted root authority.'
+        CommonCause = 'Intermediate certificate missing, broken certificate chain'
+        Resolution  = 'Install missing intermediate certificates, verify certificate chain'
+        Severity    = 'Error'
+    }
 }
 
 function Get-CAPI2ErrorDetails {
@@ -428,12 +436,12 @@ function Get-CAPI2EventLogStatus {
     try {
         Write-Host "`n=== CAPI2 Event Log Status ===" -ForegroundColor Cyan
         
-        $LogDetails = wevtutil.exe gl Microsoft-Windows-CAPI2/Operational
+        $LogDetails = wevtutil.exe gl Microsoft-Windows-CAPI2/Operational 2>&1 | Out-String
         
         # Parse log details
         $Enabled = if ($LogDetails -match "enabled:\s+(\w+)") { $matches[1] } else { "Unknown" }
-        $LogMode = if ($LogDetails -match "logFileName:\s+(.+)") { $matches[1] } else { "Unknown" }
-        $MaxSize = if ($LogDetails -match "maxSize:\s+(\d+)") { [math]::Round($matches[1] / 1MB, 2) } else { "Unknown" }
+        $LogMode = if ($LogDetails -match "logFileName:\s+(.+)") { $matches[1].Trim() } else { "Unknown" }
+        $MaxSize = if ($LogDetails -match "maxSize:\s+(\d+)") { [math]::Round([int64]$matches[1] / 1MB, 2) } else { "Unknown" }
         
         # Count events
         $EventCount = (Get-WinEvent -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Measure-Object).Count
