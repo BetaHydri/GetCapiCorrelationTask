@@ -1,48 +1,20 @@
-
-<#PSScriptInfo
-
-.VERSION 2.5
-
-.GUID 3228f1cd-8cca-4839-b9aa-7c93c83a917e
-
-.AUTHOR Jan Tiedemann
-
-.COMPANYNAME Jan Tiedemann
-
-.COPYRIGHT GNU GENERAL PUBLIC LICENSE v3
-
-.TAGS CAPI2, EventLog, Certificate, TLS, SSL, Correlation, Troubleshooting
-
-.LICENSEURI https://www.gnu.org/licenses/gpl-3.0.en.html
-
-.PROJECTURI https://github.com/BetaHydri/GetCapiCorrelationTask
-
-.ICONURI
-
-.EXTERNALMODULEDEPENDENCIES 
-
-.REQUIREDSCRIPTS
-
-.EXTERNALSCRIPTDEPENDENCIES
-
-.RELEASENOTES
-Version 2.5: Added error analysis tables, export functions, comparison features, CAPI2 log management
-Version 2.0: Added DNS/Certificate name filtering, enhanced search capabilities
-Version 1.0: Initial release with TaskID-based correlation
-
-.PRIVATEDATA
-
+<#
+.SYNOPSIS
+    CAPI2 Event Log Correlation Analysis Toolkit - PowerShell Module
+    
+.DESCRIPTION
+    A comprehensive PowerShell module for analyzing Windows certificate validation chains,
+    troubleshooting TLS/SSL connections, and diagnosing CAPI2 cryptographic errors.
+    
+.NOTES
+    Module Name:    CAPI2Tools
+    Version:        2.5.0
+    Author:         Jan Tiedemann
+    Copyright:      (c) 2022-2025 Jan Tiedemann. Licensed under GNU GPL v3.
+    
+.LINK
+    https://github.com/BetaHydri/GetCapiCorrelationTask
 #>
-
-<# 
-
-.DESCRIPTION 
- Gets the CAPI2 Operational Logs based on correlation (TaskID) or by filtering DNS/Certificate names.
- This enhanced version allows administrators to find certificate chains without knowing the TaskID beforehand.
-
-#> 
-
-#Param()
 
 #region Error Code Mappings and Helper Functions
 
@@ -154,6 +126,103 @@ Function Get-CAPI2ErrorDetails {
 
 #endregion
 
+#region Helper Functions for Display Characters
+
+Function Get-DisplayChar {
+    <#
+    .SYNOPSIS
+        Returns display characters compatible with PowerShell 5.1 and 7.
+        
+    .DESCRIPTION
+        Centralized function to get Unicode characters using hex encoding for cross-version compatibility.
+        
+    .PARAMETER Name
+        The name of the character to retrieve.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('BoxTopLeft', 'BoxTopRight', 'BoxBottomLeft', 'BoxBottomRight', 
+                     'BoxVertical', 'BoxHorizontal', 'Checkmark', 'CheckmarkBold',
+                     'Wrench', 'Flag', 'Lightbulb', 'Warning', 'Lock', 'Clipboard',
+                     'RightArrow', 'Bullet')]
+        [string]$Name
+    )
+    
+    switch ($Name) {
+        'BoxTopLeft'     { return [char]0x2554 }  # ╔
+        'BoxTopRight'    { return [char]0x2557 }  # ╗
+        'BoxBottomLeft'  { return [char]0x255A }  # ╚
+        'BoxBottomRight' { return [char]0x255D }  # ╝
+        'BoxVertical'    { return [char]0x2551 }  # ║
+        'BoxHorizontal'  { return [char]0x2550 }  # ═
+        'Checkmark'      { return [char]0x2713 }  # ✓
+        'CheckmarkBold'  { return [char]0x2705 }  # ✅
+        'Wrench'         { return [char]0x1F527 } # 🔧
+        'Flag'           { return [char]0x1F3C1 } # 🏁
+        'Lightbulb'      { return [char]0x1F4A1 } # 💡
+        'Warning'        { return [char]0x26A0 }  # ⚠
+        'Lock'           { return [char]0x1F512 } # 🔐
+        'Clipboard'      { return [char]0x1F4CB } # 📋
+        'RightArrow'     { return [char]0x2192 }  # →
+        'Bullet'         { return '*' }           # *
+    }
+}
+
+Function Write-BoxHeader {
+    <#
+    .SYNOPSIS
+        Writes a formatted box header to the console.
+        
+    .DESCRIPTION
+        Creates a consistent box-drawing header for workflow steps.
+        
+    .PARAMETER Text
+        The text to display in the header.
+        
+    .PARAMETER Icon
+        Optional icon name to display before the text.
+        
+    .PARAMETER Color
+        Console color for the header (default: Cyan).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Text,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Icon,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Color = 'Cyan'
+    )
+    
+    $Width = 63
+    $Line = (Get-DisplayChar 'BoxHorizontal') * $Width
+    
+    $DisplayText = if ($Icon) {
+        "$(Get-DisplayChar $Icon) $Text"
+    } else {
+        $Text
+    }
+    
+    # Calculate padding
+    $TextLength = $Text.Length + $(if ($Icon) { 2 } else { 0 })
+    $PaddingLeft = [Math]::Floor(($Width - $TextLength) / 2)
+    $PaddingRight = $Width - $TextLength - $PaddingLeft
+    
+    $TopLine = "$(Get-DisplayChar 'BoxTopLeft')$Line$(Get-DisplayChar 'BoxTopRight')"
+    $MiddleLine = "$(Get-DisplayChar 'BoxVertical')$(' ' * $PaddingLeft)$DisplayText$(' ' * $PaddingRight)$(Get-DisplayChar 'BoxVertical')"
+    $BottomLine = "$(Get-DisplayChar 'BoxBottomLeft')$Line$(Get-DisplayChar 'BoxBottomRight')"
+    
+    Write-Host "`n$TopLine" -ForegroundColor $Color
+    Write-Host $MiddleLine -ForegroundColor $Color
+    Write-Host "$BottomLine`n" -ForegroundColor $Color
+}
+
+#endregion
+
 #region CAPI2 Event Log Management Functions
 
 Function Enable-CAPI2EventLog {
@@ -195,7 +264,7 @@ Function Enable-CAPI2EventLog {
             wevtutil.exe sl Microsoft-Windows-CAPI2/Operational /e:true
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ CAPI2 Event Log successfully enabled." -ForegroundColor Green
+                Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully enabled." -ForegroundColor Green
                 Write-Host "  Certificate validation events will now be logged." -ForegroundColor Gray
             } else {
                 Write-Error "Failed to enable CAPI2 Event Log. Exit code: $LASTEXITCODE"
@@ -245,7 +314,7 @@ Function Disable-CAPI2EventLog {
             wevtutil.exe sl Microsoft-Windows-CAPI2/Operational /e:false
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ CAPI2 Event Log successfully disabled." -ForegroundColor Green
+                Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully disabled." -ForegroundColor Green
                 Write-Host "  Certificate validation events will no longer be logged." -ForegroundColor Gray
             } else {
                 Write-Error "Failed to disable CAPI2 Event Log. Exit code: $LASTEXITCODE"
@@ -308,7 +377,7 @@ Function Clear-CAPI2EventLog {
                 wevtutil.exe epl Microsoft-Windows-CAPI2/Operational "$Backup"
                 
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "✓ Backup completed successfully." -ForegroundColor Green
+                    Write-Host "$(Get-DisplayChar 'Checkmark') Backup completed successfully." -ForegroundColor Green
                 } else {
                     Write-Error "Failed to backup CAPI2 Event Log. Exit code: $LASTEXITCODE"
                     return
@@ -322,7 +391,7 @@ Function Clear-CAPI2EventLog {
             wevtutil.exe cl Microsoft-Windows-CAPI2/Operational
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ CAPI2 Event Log successfully cleared." -ForegroundColor Green
+                Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully cleared." -ForegroundColor Green
                 Write-Host "  $EventCount events removed. Log is now empty." -ForegroundColor Gray
             } else {
                 Write-Error "Failed to clear CAPI2 Event Log. Exit code: $LASTEXITCODE"
@@ -385,11 +454,11 @@ Function Get-CAPI2EventLogStatus {
         Write-Host ""
         
         if ($Enabled -eq "false") {
-            Write-Host "💡 Tip: Run 'Enable-CAPI2EventLog' to enable certificate event logging." -ForegroundColor Yellow
+            Write-Host "$(Get-DisplayChar 'Lightbulb') Tip: Run 'Enable-CAPI2EventLog' to enable certificate event logging." -ForegroundColor Yellow
         }
         
         if ($EventCount -eq 0) {
-            Write-Host "💡 Tip: No events found. Perform certificate operations to generate events." -ForegroundColor Yellow
+            Write-Host "$(Get-DisplayChar 'Lightbulb') Tip: No events found. Perform certificate operations to generate events." -ForegroundColor Yellow
         }
         
     } catch {
@@ -869,7 +938,7 @@ Function Get-CapiErrorAnalysis {
     
     End {
         if ($ErrorTable.Count -eq 0) {
-            Write-Host "`n✓ No errors found in the certificate validation chain!" -ForegroundColor Green
+            Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
             Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
             return
         }
@@ -1070,7 +1139,7 @@ Function Export-CapiEvents {
                 }
             }
             
-            Write-Host "✓ Export completed successfully: $Path" -ForegroundColor Green
+            Write-Host "$(Get-DisplayChar 'Checkmark') Export completed successfully: $Path" -ForegroundColor Green
             Write-Host "  Format: $Format | Size: $([math]::Round((Get-Item $Path).Length / 1KB, 2)) KB" -ForegroundColor Gray
             
         } catch {
@@ -1145,12 +1214,12 @@ Function Compare-CapiEvents {
     Write-Host "`n=== Comparison Results ===" -ForegroundColor Cyan
     
     if ($RefErrorCount -eq 0 -and $DiffErrorCount -eq 0) {
-        Write-Host "✓ No errors in either event set - All validations successful!" -ForegroundColor Green
+        Write-Host "$(Get-DisplayChar 'Checkmark') No errors in either event set - All validations successful!" -ForegroundColor Green
         return
     }
     
     if ($RefErrorCount -gt 0 -and $DiffErrorCount -eq 0) {
-        Write-Host "✓ ERRORS RESOLVED!" -ForegroundColor Green
+        Write-Host "$(Get-DisplayChar 'Checkmark') ERRORS RESOLVED!" -ForegroundColor Green
         Write-Host "  $ReferenceLabel had $RefErrorCount error(s), $DifferenceLabel has 0 errors." -ForegroundColor Green
         Write-Host "`nResolved Errors:" -ForegroundColor Green
         $ReferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
@@ -1158,7 +1227,7 @@ Function Compare-CapiEvents {
     }
     
     if ($RefErrorCount -eq 0 -and $DiffErrorCount -gt 0) {
-        Write-Host "⚠️ NEW ERRORS DETECTED!" -ForegroundColor Red
+        Write-Host "$(Get-DisplayChar 'Warning') NEW ERRORS DETECTED!" -ForegroundColor Red
         Write-Host "  $ReferenceLabel had 0 errors, $DifferenceLabel has $DiffErrorCount error(s)." -ForegroundColor Red
         Write-Host "`nNew Errors:" -ForegroundColor Red
         $DifferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
@@ -1176,7 +1245,7 @@ Function Compare-CapiEvents {
     $PersistentErrors = $RefErrorTypes | Where-Object { $_ -in $DiffErrorTypes }
     
     if ($ResolvedErrors) {
-        Write-Host "`n✓ Resolved Errors:" -ForegroundColor Green
+        Write-Host "`n$(Get-DisplayChar 'Checkmark') Resolved Errors:" -ForegroundColor Green
         $ResolvedErrors | ForEach-Object {
             $ErrorDetail = $ReferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
             Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Green
@@ -1184,7 +1253,7 @@ Function Compare-CapiEvents {
     }
     
     if ($NewErrors) {
-        Write-Host "`n⚠️ New Errors:" -ForegroundColor Red
+        Write-Host "`n$(Get-DisplayChar 'Warning') New Errors:" -ForegroundColor Red
         $NewErrors | ForEach-Object {
             $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
             Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Red
@@ -1192,7 +1261,7 @@ Function Compare-CapiEvents {
     }
     
     if ($PersistentErrors) {
-        Write-Host "`n⚠️ Persistent Errors (still present):" -ForegroundColor Yellow
+        Write-Host "`n$(Get-DisplayChar 'Warning') Persistent Errors (still present):" -ForegroundColor Yellow
         $PersistentErrors | ForEach-Object {
             $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
             Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Yellow
@@ -1204,20 +1273,195 @@ Function Compare-CapiEvents {
     Write-Host "Resolved: $($ResolvedErrors.Count) | New: $($NewErrors.Count) | Persistent: $($PersistentErrors.Count)" -ForegroundColor White
     
     if ($DiffErrorCount -lt $RefErrorCount) {
-        Write-Host "`n✓ Overall improvement: Error count reduced from $RefErrorCount to $DiffErrorCount" -ForegroundColor Green
+        Write-Host "`n$(Get-DisplayChar 'Checkmark') Overall improvement: Error count reduced from $RefErrorCount to $DiffErrorCount" -ForegroundColor Green
     } elseif ($DiffErrorCount -gt $RefErrorCount) {
-        Write-Host "`n⚠️ Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
+        Write-Host "`n$(Get-DisplayChar 'Warning') Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
     } else {
-        Write-Host "`n→ No change in error count ($RefErrorCount errors)" -ForegroundColor Yellow
+        Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count ($RefErrorCount errors)" -ForegroundColor Yellow
     }
 }
+
+#endregion
+
+#region Workflow Helper Functions
+
+Function Start-CAPI2Troubleshooting {
+    <#
+    .SYNOPSIS
+        Prepares the CAPI2 event log for a fresh troubleshooting session.
+        
+    .DESCRIPTION
+        This workflow cmdlet enables CAPI2 logging and optionally clears existing events.
+        Use this before reproducing a certificate issue to ensure clean event data.
+        Requires administrative privileges.
+        
+    .PARAMETER ClearLog
+        Clears existing CAPI2 events before starting
+        
+    .PARAMETER BackupPath
+        If specified with -ClearLog, backs up existing events before clearing
+        
+    .EXAMPLE
+        Start-CAPI2Troubleshooting
+        Enables CAPI2 logging
+        
+    .EXAMPLE
+        Start-CAPI2Troubleshooting -ClearLog
+        Enables logging and clears existing events
+        
+    .EXAMPLE
+        Start-CAPI2Troubleshooting -ClearLog -BackupPath "C:\Logs\CAPI2_Before_$(Get-Date -Format 'yyyyMMdd_HHmmss').evtx"
+        Enables logging, backs up existing events, and clears log
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$ClearLog,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$BackupPath
+    )
+    
+    Write-BoxHeader -Text "Starting CAPI2 Troubleshooting Session" -Icon "Wrench" -Color Cyan
+    
+    # Check admin rights
+    $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    
+    if (-not $IsAdmin) {
+        Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
+        return
+    }
+    
+    # Step 1: Enable logging
+    Write-Host "[Step 1/3] Enabling CAPI2 Event Log..." -ForegroundColor Yellow
+    Enable-CAPI2EventLog
+    
+    # Step 2: Clear log if requested
+    if ($ClearLog) {
+        Write-Host "`n[Step 2/3] Clearing CAPI2 Event Log..." -ForegroundColor Yellow
+        if ($BackupPath) {
+            Clear-CAPI2EventLog -Backup $BackupPath
+        } else {
+            Clear-CAPI2EventLog
+        }
+    } else {
+        Write-Host "`n[Step 2/3] Keeping existing events (use -ClearLog to clear)" -ForegroundColor Gray
+    }
+    
+    # Step 3: Show status
+    Write-Host "`n[Step 3/3] Current CAPI2 Log Status:" -ForegroundColor Yellow
+    Get-CAPI2EventLogStatus
+    
+    Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Ready!" -ForegroundColor Green
+    Write-Host "   Next steps:" -ForegroundColor White
+    Write-Host "   1. Reproduce your certificate issue (browse to site, run application, etc.)" -ForegroundColor Gray
+    Write-Host "   2. Use Find-CapiEventsByName to locate events: Find-CapiEventsByName -Name 'yoursite.com'" -ForegroundColor Gray
+    Write-Host "   3. Analyze errors: Get-CapiErrorAnalysis -Events `$Results[0].Events" -ForegroundColor Gray
+    Write-Host "   4. When done, run: Stop-CAPI2Troubleshooting`n" -ForegroundColor Gray
+}
+
+Function Stop-CAPI2Troubleshooting {
+    <#
+    .SYNOPSIS
+        Completes the CAPI2 troubleshooting session and optionally disables logging.
+        
+    .DESCRIPTION
+        This workflow cmdlet provides a summary of the troubleshooting session and
+        optionally disables CAPI2 logging to reduce log volume.
+        Requires administrative privileges.
+        
+    .PARAMETER DisableLog
+        Disables CAPI2 logging after showing summary
+        
+    .PARAMETER ExportPath
+        If specified, exports all recent events to the specified path before disabling
+        
+    .EXAMPLE
+        Stop-CAPI2Troubleshooting
+        Shows summary without disabling logging
+        
+    .EXAMPLE
+        Stop-CAPI2Troubleshooting -DisableLog
+        Shows summary and disables CAPI2 logging
+        
+    .EXAMPLE
+        Stop-CAPI2Troubleshooting -DisableLog -ExportPath "C:\Reports\CAPI2_Session_$(Get-Date -Format 'yyyyMMdd_HHmmss').evtx"
+        Exports events, shows summary, and disables logging
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$DisableLog,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ExportPath
+    )
+    
+    Write-BoxHeader -Text "Completing CAPI2 Troubleshooting Session" -Icon "Flag" -Color Cyan
+    
+    # Check admin rights
+    $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    
+    if (-not $IsAdmin) {
+        Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
+        return
+    }
+    
+    # Show final status
+    Write-Host "[Step 1/3] Final CAPI2 Log Status:" -ForegroundColor Yellow
+    Get-CAPI2EventLogStatus
+    
+    # Export if requested
+    if ($ExportPath) {
+        Write-Host "`n[Step 2/3] Exporting CAPI2 Event Log..." -ForegroundColor Yellow
+        try {
+            wevtutil.exe epl Microsoft-Windows-CAPI2/Operational "$ExportPath"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "$(Get-DisplayChar 'Checkmark') Events exported to: $ExportPath" -ForegroundColor Green
+            } else {
+                Write-Warning "Failed to export events. Exit code: $LASTEXITCODE"
+            }
+        } catch {
+            Write-Warning "Error exporting events: $($_.Exception.Message)"
+        }
+    } else {
+        Write-Host "`n[Step 2/3] No export requested (use -ExportPath to save events)" -ForegroundColor Gray
+    }
+    
+    # Disable if requested
+    Write-Host "`n[Step 3/3] CAPI2 Logging..." -ForegroundColor Yellow
+    if ($DisableLog) {
+        Disable-CAPI2EventLog
+    } else {
+        Write-Host "  Logging remains ENABLED (use -DisableLog to disable)" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Complete!" -ForegroundColor Green
+    Write-Host "   Recommended next steps:" -ForegroundColor White
+    Write-Host "   - Review exported events or analysis reports" -ForegroundColor Gray
+    Write-Host "   - Document findings and solutions" -ForegroundColor Gray
+    Write-Host "   - If issue persists, compare before/after using Compare-CapiEvents`n" -ForegroundColor Gray
+}
+
+#endregion
+
+#region Aliases
+
+# Create friendly aliases for common commands
+New-Alias -Name 'Find-CertEvents' -Value 'Find-CapiEventsByName' -Description 'Alias for Find-CapiEventsByName'
+New-Alias -Name 'Get-CertChain' -Value 'Get-CapiTaskIDEvents' -Description 'Alias for Get-CapiTaskIDEvents'
+New-Alias -Name 'Enable-CapiLog' -Value 'Enable-CAPI2EventLog' -Description 'Alias for Enable-CAPI2EventLog'
+New-Alias -Name 'Disable-CapiLog' -Value 'Disable-CAPI2EventLog' -Description 'Alias for Disable-CAPI2EventLog'
+New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias for Clear-CAPI2EventLog'
 
 #endregion
 
 # Export module members
 Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
     Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
-    Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents
+    Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, `
+    Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
+    -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
 
 <#
 .NOTES

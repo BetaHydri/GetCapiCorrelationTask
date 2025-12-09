@@ -1,102 +1,638 @@
-# Get-CapiTaskIDEvents
-In the CAPI2 Log there is sometimes the need to output all CAPI2 events in sequence that are written from a specific application or process. This function and its helper function can be used to filter those Events based on the TaskID  
+# CAPI2 Event Log Correlation Toolkit
 
-PARAMETER <b>TaskID</b><br />
-'This mandatory TaskID must be obtained from one sequece of the events'
-<details>
-<summary>     
-EXAMPLES
-</summary>
-Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
+[![Version](https://img.shields.io/badge/version-2.5-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
+[![Author](https://img.shields.io/badge/author-Jan%20Tiedemann-orange.svg)](https://github.com/BetaHydri)
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 10
-        RecordType      : Informationen
-        DetailedMessage : <CertGetCertificateChainStart xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><EventAuxInfo
-                          ProcessName="msedge.exe" /><CorrelationAuxInfo TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="1"
-                          /></CertGetCertificateChainStart>
+A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) event logs, enabling administrators to troubleshoot certificate validation, TLS/SSL connection issues, and certificate chain building problems.
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 40
-        RecordType      : Informationen
-        DetailedMessage : <CertVerifyRevocationStart xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><EventAuxInfo
-                          ProcessName="msedge.exe" /><CorrelationAuxInfo TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="2"
-                          /></CertVerifyRevocationStart>
+---
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 41
-        RecordType      : Informationen
-        DetailedMessage : <CertVerifyRevocation xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate
-                          fileRef="703D7A8F0EBF55AAA59F98EAF4A206004EB2516A.cer" subjectName="Microsoft RSA TLS CA 01" /><IssuerCertificate       
-                          fileRef="D4DE20D05E66FC53FE1A50882C78DB2852CAE474.cer" subjectName="Baltimore CyberTrust Root" /><Flags value="2"       
-                          CERT_VERIFY_CACHE_ONLY_BASED_REVOCATION="true" /><AdditionalParameters timeToUse="2022-10-25T13:48:50.075Z"
-                          currentTime="2022-10-25T13:48:50.075Z" urlRetrievalTimeout="PT15S" /><RevocationStatus index="0" error="0" reason="0"   
-                          actualFreshnessTime="PT9H33M48S" thirdPartyProviderUsed="C:\Windows\System32\cryptnet.dll" /><OCSPResponse
-                          location="TvoCache" fileRef="D3B95EBB9474B2AC60FEE68BF670ACCF0168CEDE.bin" issuerName="Baltimore CyberTrust Root"       
-                          /><EventAuxInfo ProcessName="msedge.exe" /><CorrelationAuxInfo TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}"
-                          SeqNumber="3" /><Result value="0" /></CertVerifyRevocation>
+## 📋 Table of Contents
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 40
-        RecordType      : Informationen
-        DetailedMessage : <CertVerifyRevocationStart xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><EventAuxInfo
-                          ProcessName="msedge.exe" /><CorrelationAuxInfo TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="4"
-                          /></CertVerifyRevocationStart>
+- [Overview](#overview)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+  - [Event Log Management](#event-log-management)
+  - [Search by DNS/Certificate Name](#search-by-dnscertificate-name)
+  - [Error Analysis](#error-analysis)
+  - [Export Functionality](#export-functionality)
+  - [Comparison Features](#comparison-features)
+- [Functions](#functions)
+- [Examples](#examples)
+- [Error Codes Reference](#error-codes-reference)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author](#author)
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 50
-        RecordType      : Informationen
-        DetailedMessage : <CryptRetrieveObjectByUrlCacheStart xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><EventAuxInfo
-                          ProcessName="msedge.exe" /><CorrelationAuxInfo TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="5"
-                          /></CryptRetrieveObjectByUrlCacheStart>
+---
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 51
-        RecordType      : Informationen
-        DetailedMessage : <CryptRetrieveObjectByUrlCache xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><URL
-                          scheme="http">http://mscrl.microsoft.com/pki/mscorp/crl/Microsoft%20RSA%20TLS%20CA%2001.crl</URL><Object
-                          type="CONTEXT_OID_CRL" constant="2" /><Flags value="2003" CRYPT_RETRIEVE_MULTIPLE_OBJECTS="true"
-                          CRYPT_CACHE_ONLY_RETRIEVAL="true" CRYPT_LDAP_SCOPE_BASE_ONLY_RETRIEVAL="true" /><AuxInfo
-                          maxUrlRetrievalByteCount="104857600" /><CacheInfo lastSyncTime="2022-10-11T17:26:56.434Z"><URLCachePrefetchInfo
-                          objectType="CRYPTNET_URL_CACHE_PRE_FETCH_CRL" error="10D0" thisUpdateTime="2022-10-10T21:49:58Z"
-                          nextUpdateTime="2022-10-18T22:09:58Z" publishTime="2022-10-14T21:59:58Z" /><URLCacheFlushInfo
-                          expireTime="2022-10-18T22:09:58Z" /><URLCacheResponseInfo responseType="CRYPTNET_URL_CACHE_RESPONSE_HTTP"
-                          responseValidated="true" lastModifiedTime="2022-10-10T22:00:15Z"
-                          /></CacheInfo><RetrievedObjects><CertificateRevocationList fileRef="44649D4C2634C2B5BD91AB9E0A70C5EAFC8B864A.crl"       
-                          issuerName="Microsoft RSA TLS CA 01" /></RetrievedObjects><EventAuxInfo ProcessName="msedge.exe" /><CorrelationAuxInfo  
-                          TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="6" /><Result value="0" /></CryptRetrieveObjectByUrlCache>    
+## 🔍 Overview
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 42
-        RecordType      : Fehler
-        DetailedMessage : <CertRejectedRevocationInfo xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><SubjectCertificate
-                          fileRef="930F5167FA5112F077FC65AB3DFFE8A347F5BD9B.cer" subjectName="r.bing.com" /><IssuerCertificate
-                          fileRef="703D7A8F0EBF55AAA59F98EAF4A206004EB2516A.cer" subjectName="Microsoft RSA TLS CA 01"
-                          /><CertificateRevocationList location="UrlCache"
-                          url="http://mscrl.microsoft.com/pki/mscorp/crl/Microsoft%20RSA%20TLS%20CA%2001.crl"
-                          fileRef="44649D4C2634C2B5BD91AB9E0A70C5EAFC8B864A.crl" issuerName="Microsoft RSA TLS CA 01" /><Action
-                          name="CheckTimeValidity" /><EventAuxInfo ProcessName="msedge.exe" /><CorrelationAuxInfo
-                          TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="7" /></CertRejectedRevocationInfo>
+The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 41
-        RecordType      : Fehler
-        DetailedMessage : <CertVerifyRevocation xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate
-                          fileRef="930F5167FA5112F077FC65AB3DFFE8A347F5BD9B.cer" subjectName="r.bing.com" /><IssuerCertificate
-                          fileRef="703D7A8F0EBF55AAA59F98EAF4A206004EB2516A.cer" subjectName="Microsoft RSA TLS CA 01" /><Flags value="2"
-                          CERT_VERIFY_CACHE_ONLY_BASED_REVOCATION="true" /><AdditionalParameters timeToUse="2022-10-25T13:48:50.075Z"
-                          currentTime="2022-10-25T13:48:50.075Z" urlRetrievalTimeout="PT15S" /><RevocationStatus index="0" error="80092013"       
-                          reason="0" actualFreshnessTime="P14DT15H58M52S" thirdPartyProviderUsed="C:\Windows\System32\cryptnet.dll"
-                          /><CertificateRevocationList location="TvoCache" fileRef="44649D4C2634C2B5BD91AB9E0A70C5EAFC8B864A.crl"
-                          issuerName="Microsoft RSA TLS CA 01" /><EventAuxInfo ProcessName="msedge.exe" /><CorrelationAuxInfo
-                          TaskId="{7E11B6A3-50EA-47ED-928D-BBE4784EFA3F}" SeqNumber="8" /><Result value="80092013">Die Sperrfunktion konnte die   
-                          Sperrung nicht überprüfen, da der Sperrserver offline war.</Result></CertVerifyRevocation>
+**Version 2.5** introduces comprehensive error analysis, event log management, export capabilities, and comparison features.
 
-        TimeCreated     : 10/25/2022 3:48:50 PM
-        ID              : 90
-        RecordType      : Informationen
-        DetailedMessage : <X509Objects xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate
-                          fileRef="703D7A8F0EBF55AAA59F98EAF4A206004EB2516A.cer" subjectName="Microsoft RSA TLS CA 01"><Subject><CN>Microsoft     
+### What's New in v2.5
+
+- 🔍 **Intelligent Error Analysis**: Automatic error code translation with human-readable descriptions
+- 📊 **Comprehensive Error Tables**: See exactly what failed, why, and how to fix it
+- 🎯 **Event Log Management**: Enable, disable, clear, and check status of CAPI2 logging
+- 💾 **Export Functionality**: Export to CSV, JSON, HTML, or XML formats
+- 🔄 **Comparison Features**: Compare before/after to verify error resolution
+- 📖 **Error Code Dictionary**: Built-in reference for common CAPI2 error codes
+- 🎨 **Enhanced Reporting**: Beautiful HTML reports with color-coded errors
+
+---
+
+## 🚀 Features
+
+### Core Capabilities
+- **Automatic Correlation Discovery**: Search by DNS name, certificate subject, or issuer
+- **Complete Chain Retrieval**: Get all events in a certificate validation sequence
+- **Smart Error Detection**: Automatically identifies and explains certificate errors
+- **Multi-Format Export**: Export to CSV, JSON, HTML, or XML
+- **Before/After Comparison**: Track error resolution progress
+
+### Event Log Management
+- **Enable/Disable Logging**: Control CAPI2 event collection
+- **Clear Event Log**: Start fresh troubleshooting sessions with optional backup
+- **Status Monitoring**: Check log status, event count, and date ranges
+
+### Analysis Features
+- **Error Translation**: Convert cryptic error codes to actionable information
+- **Root Cause Analysis**: Understand why certificate validation failed
+- **Resolution Guidance**: Get step-by-step fixes for common issues
+- **Severity Levels**: Prioritize critical vs. warning issues
+
+---
+
+## 💻 Requirements
+
+- **Operating System**: Windows 7/Server 2008 R2 or later
+- **PowerShell**: Version 5.1 or higher (PowerShell Core 7+ supported)
+- **Permissions**: Read access to `Microsoft-Windows-CAPI2/Operational` event log
+- **CAPI2 Logging**: Must be enabled (see [Troubleshooting](#troubleshooting))
+
+---
+
+## 📥 Installation
+
+### Option 1: Direct Download
+
+1. Download `GetCapiCorrelationTask.ps1`
+2. Place it in your PowerShell module path or working directory
+3. Import the script:
+
+```powershell
+. .\GetCapiCorrelationTask.ps1
+```
+
+### Option 2: Clone Repository
+
+```powershell
+git clone https://github.com/BetaHydri/GetCapiCorrelationTask.git
+cd GetCapiCorrelationTask
+. .\GetCapiCorrelationTask.ps1
+```
+
+### Option 3: Module Installation
+
+```powershell
+# Copy to user module directory
+$ModulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\GetCapiCorrelationTask"
+New-Item -Path $ModulePath -ItemType Directory -Force
+Copy-Item .\GetCapiCorrelationTask.ps1 -Destination $ModulePath
+
+# Import module
+Import-Module GetCapiCorrelationTask
+```
+
+---
+
+## ⚡ Quick Start
+
+### Complete Troubleshooting Workflow
+
+```powershell
+# 1. Enable CAPI2 logging
+Enable-CAPI2EventLog
+
+# 2. Clear existing events for clean test
+Clear-CAPI2EventLog
+
+# 3. Reproduce the certificate issue (browse to website, run application, etc.)
+
+# 4. Search for events by domain name
+$Results = Find-CapiEventsByName -Name "yoursite.com"
+
+# 5. Analyze errors with detailed explanations
+Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+
+# 6. Export for documentation
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_issue.html" -IncludeErrorAnalysis
+
+# 7. After fixing the issue, compare results
+$After = Find-CapiEventsByName -Name "yoursite.com"
+Compare-CapiEvents -ReferenceEvents $Results[0].Events -DifferenceEvents $After[0].Events
+
+# 8. Disable logging when done
+Disable-CAPI2EventLog
+```
+
+---
+
+## 📖 Usage
+
+### Event Log Management
+
+Control CAPI2 event logging for troubleshooting:
+
+```powershell
+# Check current status
+Get-CAPI2EventLogStatus
+
+# Enable logging (requires admin)
+Enable-CAPI2EventLog
+
+# Disable logging
+Disable-CAPI2EventLog
+
+# Clear log (with optional backup)
+Clear-CAPI2EventLog -Backup "C:\Backup\CAPI2_$(Get-Date -Format 'yyyyMMdd_HHmmss').evtx"
+```
+
+**Output Example:**
+```
+=== CAPI2 Event Log Status ===
+Status:          ENABLED
+Event Count:     847
+Max Size:        20 MB
+Oldest Event:    12/08/2025 14:23:11
+Newest Event:    12/09/2025 09:45:32
+Log Location:    %SystemRoot%\System32\Winevt\Logs\Microsoft-Windows-CAPI2%4Operational.evtx
+```
+
+---
+
+### Search by DNS/Certificate Name
+
+The primary function for finding certificate chains:
+
+```powershell
+# Search for a specific domain
+Find-CapiEventsByName -Name "microsoft.com"
+
+# Search with wildcards
+Find-CapiEventsByName -Name "*.contoso.com"
+
+# Search in the last 48 hours
+Find-CapiEventsByName -Name "google.com" -Hours 48
+
+# Search for certificate issuer
+Find-CapiEventsByName -Name "DigiCert"
+```
+
+---
+
+### Error Analysis
+
+Get comprehensive error analysis with resolution steps:
+
+```powershell
+# Analyze errors from search results
+$Results = Find-CapiEventsByName -Name "failingsite.com"
+Get-CapiErrorAnalysis -Events $Results[0].Events
+
+# Include error summary
+Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+
+# Direct TaskID analysis
+$Events = Get-CapiTaskIDEvents -TaskID "GUID-HERE"
+Get-CapiErrorAnalysis -Events $Events
+```
+
+**Output Example:**
+```
+=== CAPI2 Error Analysis ===
+Found 2 error(s) in the certificate validation chain.
+
+TimeCreated          Severity ErrorName                Certificate      Description
+-----------          -------- ---------                -----------      -----------
+12/9/2025 9:45:32 AM Critical  CRYPT_E_REVOCATION_...  mail.contoso.com The revocation...
+
+=== Detailed Error Information ===
+
+[Critical] CRYPT_E_REVOCATION_OFFLINE - 0x80092013
+  Certificate:   mail.contoso.com
+  Issuer:        DigiCert TLS RSA SHA256 2020 CA1
+  Description:   The revocation function was unable to check revocation because the revocation server was offline.
+  Common Cause:  Network connectivity issue, CRL/OCSP server unavailable, firewall blocking
+  Resolution:    Check network connectivity, verify CRL/OCSP URLs are accessible, check proxy settings
+```
+
+---
+
+### Export Functionality
+
+Export events to multiple formats:
+
+```powershell
+# Export to CSV
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\events.csv"
+
+# Export to JSON with error analysis
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\analysis.json" -IncludeErrorAnalysis
+
+# Export to HTML report (recommended for documentation)
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_report.html" -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+
+# Export to XML
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\events.xml"
+```
+
+The HTML export creates a beautiful, color-coded report with:
+- Event summary and metadata
+- Error analysis table with severity indicators
+- Full event details with certificates
+- Timestamps and process information
+
+---
+
+### Comparison Features
+
+Compare certificate validation before and after fixes:
+
+```powershell
+# Capture baseline (before fix)
+$Before = Find-CapiEventsByName -Name "problemsite.com"
+
+# Apply your fix (install certificate, update configuration, etc.)
+
+# Capture after fix
+$After = Find-CapiEventsByName -Name "problemsite.com"
+
+# Compare to see what changed
+Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events
+
+# Custom labels for clarity
+Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events `
+    -ReferenceLabel "Before Certificate Update" -DifferenceLabel "After Certificate Update"
+```
+
+**Output Example:**
+```
+=== CAPI2 Event Comparison ===
+Before Events: 12 | After Events: 10
+
+=== Comparison Results ===
+✓ ERRORS RESOLVED!
+  Before had 2 error(s), After has 0 errors.
+
+Resolved Errors:
+ErrorName                    Certificate       Description
+---------                    -----------       -----------
+CRYPT_E_REVOCATION_OFFLINE  mail.contoso.com  The revocation function was unable...
+
+=== Summary ===
+Resolved: 2 | New: 0 | Persistent: 0
+
+✓ Overall improvement: Error count reduced from 2 to 0
+```
+
+---
+
+## 🔧 Functions
+
+### Core Search Functions
+
+#### `Find-CapiEventsByName`
+Searches CAPI2 events by DNS name or certificate subject and retrieves all correlated events.
+
+**Parameters**:
+- `Name` (Required): DNS name or certificate subject to search for
+- `MaxEvents`: Maximum events to retrieve (default: 1000)
+- `Hours`: Hours to look back (default: 24)
+- `IncludePattern`: Additional filter pattern
+
+**Returns**: Array of correlation chain objects
+
+---
+
+#### `Get-CapiTaskIDEvents`
+Retrieves all CAPI2 events that share the same correlation TaskID.
+
+**Parameters**:
+- `TaskID` (Required): Correlation TaskID (GUID)
+
+**Returns**: Array of event objects
+
+---
+
+### Analysis Functions
+
+#### `Get-CapiErrorAnalysis`
+Analyzes CAPI2 events and presents errors in a comprehensive table format with descriptions and resolutions.
+
+**Parameters**:
+- `Events` (Required): Array of CAPI2 events
+- `IncludeSummary`: Shows error count summary
+
+**Returns**: Error analysis table with severity, descriptions, and resolution steps
+
+---
+
+### Export Functions
+
+#### `Export-CapiEvents`
+Exports CAPI2 events to various formats (CSV, JSON, HTML, XML).
+
+**Parameters**:
+- `Events` (Required): Array of CAPI2 events to export
+- `Path` (Required): Output file path
+- `Format`: CSV, JSON, HTML, or XML (auto-detected from extension)
+- `IncludeErrorAnalysis`: Include error analysis in export
+- `TaskID`: TaskID for reference in export
+
+---
+
+### Comparison Functions
+
+#### `Compare-CapiEvents`
+Compares two CAPI2 event correlation chains to identify changes or resolved errors.
+
+**Parameters**:
+- `ReferenceEvents` (Required): Original/baseline events
+- `DifferenceEvents` (Required): New events to compare
+- `ReferenceLabel`: Label for reference (default: "Before")
+- `DifferenceLabel`: Label for difference (default: "After")
+
+**Returns**: Comparison summary with resolved, new, and persistent errors
+
+---
+
+### Event Log Management Functions
+
+#### `Enable-CAPI2EventLog`
+Enables the CAPI2 Operational event log. Requires administrative privileges.
+
+---
+
+#### `Disable-CAPI2EventLog`
+Disables the CAPI2 Operational event log. Requires administrative privileges.
+
+---
+
+#### `Clear-CAPI2EventLog`
+Clears all events from the CAPI2 log with optional backup. Requires administrative privileges.
+
+**Parameters**:
+- `Backup`: Path to backup file before clearing
+
+---
+
+#### `Get-CAPI2EventLogStatus`
+Displays current status of the CAPI2 event log including enabled state, event count, and date ranges.
+
+---
+
+### Helper Functions
+
+#### `Convert-EventLogRecord`
+Internal helper that converts Windows Event Log records to PowerShell objects.
+
+---
+
+#### `Format-XML`
+Internal helper that formats XML data for readable output.
+
+---
+
+#### `Get-CAPI2ErrorDetails`
+Internal helper that translates error codes to human-readable descriptions.
+
+---
+
+## 📚 Examples
+
+### Example 1: Complete Troubleshooting Session
+
+```powershell
+# Start fresh troubleshooting session
+Enable-CAPI2EventLog
+Clear-CAPI2EventLog
+
+# Reproduce the issue (browse to failing site, etc.)
+
+# Find and analyze events
+$Results = Find-CapiEventsByName -Name "problematic-site.com"
+Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+
+# Export for documentation
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\issue_report.html" -IncludeErrorAnalysis
+```
+
+### Example 2: Track Fix Progress
+
+```powershell
+# Capture baseline
+$Before = Find-CapiEventsByName -Name "myapp.company.com"
+
+# Apply certificate fix
+
+# Test again
+$After = Find-CapiEventsByName -Name "myapp.company.com"
+
+# Compare results
+Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events
+```
+
+### Example 3: Investigate Specific Error
+
+```powershell
+# Find events with revocation errors
+$Results = Find-CapiEventsByName -Name "*.microsoft.com" -IncludePattern "revocation"
+
+# Analyze first chain
+$Analysis = Get-CapiErrorAnalysis -Events $Results[0].Events
+
+# Filter for critical errors only
+$CriticalErrors = $Analysis | Where-Object { $_.Severity -eq "Critical" }
+$CriticalErrors | Format-Table ErrorName, Certificate, Resolution -Wrap
+```
+
+### Example 4: Bulk Analysis and Reporting
+
+```powershell
+# Search for multiple sites
+$Sites = @("site1.com", "site2.com", "site3.com")
+
+foreach ($Site in $Sites) {
+    $Results = Find-CapiEventsByName -Name $Site -Hours 168
+    
+    if ($Results) {
+        $OutputPath = "C:\Reports\$($Site)_analysis.html"
+        Export-CapiEvents -Events $Results[0].Events -Path $OutputPath -IncludeErrorAnalysis
+        Write-Host "✓ Exported $Site analysis to $OutputPath" -ForegroundColor Green
+    }
+}
+```
+
+### Example 5: Monitor Application Certificate Usage
+
+```powershell
+# Enable logging
+Enable-CAPI2EventLog
+
+# Run your application
+Start-Process "C:\Apps\MyApp.exe"
+Start-Sleep -Seconds 30
+
+# Find all certificate operations
+$Results = Find-CapiEventsByName -Name "*" -Hours 1
+
+# Filter by application process
+$AppEvents = $Results | ForEach-Object {
+    $_.Events | Where-Object { $_.DetailedMessage -like "*MyApp.exe*" }
+}
+
+Get-CapiErrorAnalysis -Events $AppEvents
+```
+
+---
+
+## 🔐 Error Codes Reference
+
+Common CAPI2 error codes with explanations:
+
+| Error Code | Name | Description | Common Resolution |
+|------------|------|-------------|-------------------|
+| `0x80092013` | CRYPT_E_REVOCATION_OFFLINE | Revocation server offline | Check network/firewall, verify CRL/OCSP URLs |
+| `0x80092012` | CRYPT_E_REVOKED | Certificate revoked | Obtain new certificate, investigate revocation |
+| `0x800B0101` | CERT_E_EXPIRED | Certificate expired | Renew certificate, check system time |
+| `0x800B010F` | CERT_E_CN_NO_MATCH | Common name mismatch | Get certificate with correct CN/SAN |
+| `0x800B0109` | CERT_E_UNTRUSTEDROOT | Untrusted root CA | Install root CA certificate |
+| `0x800B010A` | CERT_E_CHAINING | Cannot build chain | Install intermediate certificates |
+| `0x80096004` | TRUST_E_CERT_SIGNATURE | Invalid signature | Re-download certificate, verify source |
+| `0x800B0111` | CERT_E_WRONG_USAGE | Wrong certificate usage | Get certificate with correct EKU |
+| `0x80092010` | CRYPT_E_NOT_FOUND | Object not found | Verify certificate installation |
+
+**For detailed error analysis**, use `Get-CapiErrorAnalysis` which provides:
+- Full error description
+- Common causes
+- Step-by-step resolution instructions
+- Severity classification
+
+---
+
+## 🔍 Troubleshooting
+
+### CAPI2 Logging Not Enabled
+
+If you see no events, CAPI2 logging may be disabled:
+
+```powershell
+# Enable CAPI2 logging
+wevtutil.exe sl Microsoft-Windows-CAPI2/Operational /e:true
+
+# Verify it's enabled
+wevtutil.exe gl Microsoft-Windows-CAPI2/Operational
+```
+
+### No Events Found
+
+If searches return no results:
+
+1. **Increase time range**: `Find-CapiEventsByName -Name "example.com" -Hours 168`
+2. **Broaden search**: Use wildcards like `*.example.com`
+3. **Check event log**: Verify events exist: `Get-WinEvent -LogName Microsoft-Windows-CAPI2/Operational -MaxEvents 10`
+4. **Verify logging**: Ensure CAPI2 logging is enabled (see above)
+
+### Performance Issues
+
+For large event logs:
+
+```powershell
+# Limit initial retrieval
+Find-CapiEventsByName -Name "example.com" -MaxEvents 500 -Hours 6
+
+# Or use TaskID directly if known
+Get-CapiTaskIDEvents -TaskID "KNOWN-GUID-HERE"
+```
+
+### Access Denied
+
+Run PowerShell as Administrator if you encounter permission errors.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
+
+### Development Guidelines
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with clear commit messages
+4. Test thoroughly on Windows 10/11 and Server 2019/2022
+5. Submit a pull request
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU General Public License v3.0**.
+
+See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
+
+---
+
+## 👤 Author
+
+**Jan Tiedemann**
+
+- GitHub: [@BetaHydri](https://github.com/BetaHydri)
+- Repository: [GetCapiCorrelationTask](https://github.com/BetaHydri/GetCapiCorrelationTask)
+
+---
+
+## 📊 Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.5 | December 2025 | Added error analysis tables, CAPI2 log management, export functionality (CSV/JSON/HTML/XML), comparison features, error code dictionary |
+| 2.0 | December 2025 | Added DNS/certificate name search, enhanced UI, improved documentation |
+| 1.0 | 2022 | Initial release with TaskID-based correlation |
+
+---
+
+## 🙏 Acknowledgments
+
+- Microsoft CAPI2 documentation team
+- PowerShell community for best practices
+- Contributors and users providing feedback
+
+---
+
+## 📞 Support
+
+For issues, questions, or suggestions:
+
+- Open an issue on [GitHub](https://github.com/BetaHydri/GetCapiCorrelationTask/issues)
+- Check existing documentation and examples
+- Review PowerShell event log fundamentals
+
+---
+
+**Made with ❤️ for Windows Administrators**
+     
                           RSA TLS CA 01</CN><O>Microsoft Corporation</O><C>US</C></Subject><SubjectKeyID computed="false"
                           hash="B5760C3011CEC792424D4CC75C2CC8A90CE80B64" /><SignatureAlgorithm oid="1.2.840.113549.1.1.11" hashName="SHA256"     
                           publicKeyName="RSA" /><PublicKeyAlgorithm oid="1.2.840.113549.1.1.1" publicKeyName="RSA" publicKeyLength="4096"
