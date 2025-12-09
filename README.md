@@ -27,6 +27,7 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 - [Examples](#-examples)
 - [Error Codes Reference](#-error-codes-reference)
 - [Troubleshooting](#-troubleshooting)
+- [Testing](#-testing)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Author](#-author)
@@ -583,6 +584,57 @@ Get-CapiTaskIDEvents -TaskID "KNOWN-GUID-HERE"
 ### Access Denied
 
 Run PowerShell as Administrator if you encounter permission errors.
+
+---
+
+## 🧪 Testing
+
+The module includes two complementary test suites for quality assurance:
+
+### Quick Unit Tests (Pester)
+Fast automated tests with mock data - **no admin required**:
+
+```powershell
+# Run all unit tests (~1.5 seconds)
+Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1
+
+# Run with detailed output
+Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1 -PassThru
+
+# Exclude integration tests
+Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1 -ExcludeTag Integration
+```
+
+**Coverage**: 29 tests covering module structure, error codes, exports, and core functionality
+
+### Integration/E2E Tests
+Comprehensive real-world testing with live websites and event log - **requires admin**:
+
+```powershell
+# Run full integration test suite
+.\Test-CAPI2Module.ps1
+
+# Keep CAPI2 logging enabled after tests
+.\Test-CAPI2Module.ps1 -KeepLogEnabled
+
+# Custom export folder
+.\Test-CAPI2Module.ps1 -ExportFolder "C:\MyTests"
+```
+
+**Coverage**: 10 integration tests including live certificate validation, event capture, and export workflows
+
+### When to Use Which?
+
+| Scenario | Pester Unit Tests | Integration Tests |
+|----------|------------------|-------------------|
+| During development | ✅ Yes | ❌ No |
+| Before commits | ✅ Yes | ⚠️ Optional |
+| CI/CD pipeline | ✅ Yes | ❌ No (requires admin) |
+| Before releases | ✅ Yes | ✅ Yes |
+| Troubleshooting | ❌ No | ✅ Yes |
+| Demonstrations | ❌ No | ✅ Yes |
+
+📖 See [Tests/README.md](Tests/README.md) for detailed Pester test documentation.
 
 ---
 

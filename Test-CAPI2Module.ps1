@@ -1,19 +1,37 @@
 <#
 .SYNOPSIS
-    Test script for CAPI2Tools module validation
+    Integration/E2E test script for CAPI2Tools module validation
     
 .DESCRIPTION
-    Tests the CAPI2Tools module by:
+    This is an INTEGRATION TEST script that validates the module with real-world scenarios.
+    
+    Unlike the Pester unit tests (Tests/CAPI2Tools.Tests.ps1) which run fast automated tests
+    with mock data, this script performs end-to-end validation by:
+    
     1. Importing the module
-    2. Enabling CAPI2 logging
-    3. Generating certificate events by connecting to real websites
-    4. Analyzing the captured events
-    5. Cleaning up
+    2. Enabling CAPI2 logging (requires admin)
+    3. Generating REAL certificate events by connecting to live websites
+    4. Analyzing the captured events from the actual event log
+    5. Testing all export formats with real data
+    6. Cleaning up
+    
+    WHEN TO USE:
+    - Before releases to validate real-world functionality
+    - Manual testing and demonstrations
+    - Troubleshooting module behavior with actual certificate chains
+    - Verifying event log integration works correctly
+    
+    FOR FAST AUTOMATED TESTING:
+    - Use: Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1
+    - No admin required, runs in ~1.5 seconds
+    - Perfect for CI/CD and development
     
 .NOTES
     Author: Jan Tiedemann
     Date: December 2025
-    Requires: Administrator privileges
+    Type: Integration/E2E Testing
+    Requires: Administrator privileges, Internet access
+    Related: Tests/CAPI2Tools.Tests.ps1 (Pester unit tests)
 #>
 
 [CmdletBinding()]
