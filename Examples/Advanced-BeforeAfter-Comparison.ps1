@@ -67,8 +67,8 @@ $BeforeEvents = $BeforeResults[0].Events
 Write-Host "$(Get-Char Check) Captured $($BeforeEvents.Count) events before fix" -ForegroundColor Green
 
 # Analyze BEFORE errors
-Write-Host "`nBEFORE Fix - Error Analysis:" -ForegroundColor Yellow
-$BeforeErrors = Get-CapiErrorAnalysis -Events $BeforeEvents -IncludeSummary
+Write-Host "\nBEFORE Fix - Error Analysis:" -ForegroundColor Yellow
+Get-CapiErrorAnalysis -Events $BeforeEvents -IncludeSummary | Out-Null
 
 # Export BEFORE state
 $ReportFolder = "C:\Temp\CAPI2Comparison_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
@@ -118,8 +118,8 @@ $AfterEvents = $AfterResults[0].Events
 Write-Host "$(Get-Char Check) Captured $($AfterEvents.Count) events after fix" -ForegroundColor Green
 
 # Analyze AFTER errors
-Write-Host "`nAFTER Fix - Error Analysis:" -ForegroundColor Yellow
-$AfterErrors = Get-CapiErrorAnalysis -Events $AfterEvents -IncludeSummary
+Write-Host "\nAFTER Fix - Error Analysis:" -ForegroundColor Yellow
+Get-CapiErrorAnalysis -Events $AfterEvents -IncludeSummary | Out-Null
 
 # Export AFTER state
 Export-CapiEvents -Events $AfterEvents `

@@ -880,10 +880,10 @@ function Get-CapiErrorAnalysis {
     }
     
     process {
-        foreach ($Event in $Events) {
+        foreach ($CurrentEvent in $Events) {
             # Parse XML to find error codes
             try {
-                [xml]$EventXml = "<root>$($Event.DetailedMessage)</root>"
+                [xml]$EventXml = "<root>$($CurrentEvent.DetailedMessage)</root>"
                 
                 # Check for Result elements with error values
                 $ResultNodes = $EventXml.SelectNodes("//*[@value]")
@@ -922,8 +922,8 @@ function Get-CapiErrorAnalysis {
                     
                     # Create error entry
                     $ErrorEntry = [PSCustomObject]@{
-                        TimeCreated = $Event.TimeCreated
-                        EventID     = $Event.ID
+                        TimeCreated = $CurrentEvent.TimeCreated
+                        EventID     = $CurrentEvent.ID
                         Severity    = $ErrorDetails.Severity
                         ErrorCode   = $ErrorDetails.Code
                         ErrorName   = $ErrorDetails.HexCode
@@ -947,7 +947,7 @@ function Get-CapiErrorAnalysis {
                 }
             }
             catch {
-                Write-Verbose "Could not parse event ID $($Event.ID): $_"
+                Write-Verbose "Could not parse event ID $($CurrentEvent.ID): $_"
             }
         }
     }
@@ -967,22 +967,22 @@ function Get-CapiErrorAnalysis {
         
         Write-Host "`n=== Detailed Error Information ===" -ForegroundColor Cyan
         
-        foreach ($Error in $ErrorTable) {
-            Write-Host "`n[$($Error.Severity)] $($Error.ErrorName) - $($Error.ErrorCode)" -ForegroundColor $(
-                switch ($Error.Severity) {
+        foreach ($ErrorEntry in $ErrorTable) {
+            Write-Host "`n[$($ErrorEntry.Severity)] $($ErrorEntry.ErrorName) - $($ErrorEntry.ErrorCode)" -ForegroundColor $(
+                switch ($ErrorEntry.Severity) {
                     "Critical" { "Red" }
                     "Error" { "Red" }
                     "Warning" { "Yellow" }
                     default { "White" }
                 }
             )
-            Write-Host "  Certificate:   $($Error.Certificate)" -ForegroundColor Gray
-            if ($Error.Issuer) {
-                Write-Host "  Issuer:        $($Error.Issuer)" -ForegroundColor Gray
+            Write-Host "  Certificate:   $($ErrorEntry.Certificate)" -ForegroundColor Gray
+            if ($ErrorEntry.Issuer) {
+                Write-Host "  Issuer:        $($ErrorEntry.Issuer)" -ForegroundColor Gray
             }
-            Write-Host "  Description:   $($Error.Description)" -ForegroundColor White
-            Write-Host "  Common Cause:  $($Error.CommonCause)" -ForegroundColor Yellow
-            Write-Host "  Resolution:    $($Error.Resolution)" -ForegroundColor Green
+            Write-Host "  Description:   $($ErrorEntry.Description)" -ForegroundColor White
+            Write-Host "  Common Cause:  $($ErrorEntry.CommonCause)" -ForegroundColor Yellow
+            Write-Host "  Resolution:    $($ErrorEntry.Resolution)" -ForegroundColor Green
         }
         
         # Display summary if requested

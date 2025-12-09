@@ -96,7 +96,7 @@ if ($Results) {
     # Step 4: Analyze errors
     Write-Host "`n### STEP 4: Analyze Certificate Errors ###`n" -ForegroundColor Yellow
     
-    $ErrorAnalysis = Get-CapiErrorAnalysis -Events $SelectedChain.Events -IncludeSummary
+    Get-CapiErrorAnalysis -Events $SelectedChain.Events -IncludeSummary | Out-Null
     
     # ------------------------------------------------------------------------------
     
