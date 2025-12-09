@@ -92,7 +92,7 @@ $Script:CAPI2ErrorCodes = @{
         Resolution  = 'Verify certificate is installed, check certificate store'
         Severity    = 'Error'
     }
-    'FBF' = @{
+    'FBF'        = @{
         Code        = 'FBF'
         HexCode     = 'CERT_E_CHAINING'
         Description = 'A certificate chain could not be built to a trusted root authority.'
@@ -1494,7 +1494,7 @@ New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias
 # Export module members
 Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
     Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
-    Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, `
+    Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, Get-CAPI2ErrorDetails, `
     Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
     -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
 

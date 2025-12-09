@@ -27,10 +27,10 @@ param(
 
 # Test websites with different certificate characteristics
 $TestWebsites = @(
-    @{Name = "microsoft.com"; Expected = "Valid certificate"}
-    @{Name = "github.com"; Expected = "Valid certificate with GitHub CA"}
-    @{Name = "google.com"; Expected = "Valid certificate with Google Trust Services"}
-    @{Name = "expired.badssl.com"; Expected = "Expired certificate (should fail)"}
+    @{Name = "microsoft.com"; Expected = "Valid certificate" }
+    @{Name = "github.com"; Expected = "Valid certificate with GitHub CA" }
+    @{Name = "google.com"; Expected = "Valid certificate with Google Trust Services" }
+    @{Name = "expired.badssl.com"; Expected = "Expired certificate (should fail)" }
 )
 
 Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -178,7 +178,7 @@ Write-Host "━━━━━━━━━━━━━━━━━━━━━━�
 
 $TestResults = @()
 
-foreach ($Site in $TestWebsites | Where-Object {$_.Name -notmatch "badssl"}) {
+foreach ($Site in $TestWebsites | Where-Object { $_.Name -notmatch "badssl" }) {
     Write-Host "`n  Searching for: $($Site.Name)" -ForegroundColor Cyan
     
     try {
@@ -190,23 +190,23 @@ foreach ($Site in $TestWebsites | Where-Object {$_.Name -notmatch "badssl"}) {
             Write-Host "      Events: $($Results[0].EventCount)" -ForegroundColor Gray
             
             $TestResults += [PSCustomObject]@{
-                Website = $Site.Name
-                Found = $true
+                Website    = $Site.Name
+                Found      = $true
                 ChainCount = $Results.Count
-                TaskID = $Results[0].TaskID
+                TaskID     = $Results[0].TaskID
                 EventCount = $Results[0].EventCount
-                Events = $Results[0].Events
+                Events     = $Results[0].Events
             }
         }
         else {
             Write-Host "    ! No events found for $($Site.Name)" -ForegroundColor Yellow
             $TestResults += [PSCustomObject]@{
-                Website = $Site.Name
-                Found = $false
+                Website    = $Site.Name
+                Found      = $false
                 ChainCount = 0
-                TaskID = $null
+                TaskID     = $null
                 EventCount = 0
-                Events = $null
+                Events     = $null
             }
         }
     }
@@ -220,7 +220,7 @@ foreach ($Site in $TestWebsites | Where-Object {$_.Name -notmatch "badssl"}) {
 Write-Host "`n[TEST 7] Analyze Certificate Errors" -ForegroundColor Yellow
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
 
-foreach ($Result in $TestResults | Where-Object {$_.Found}) {
+foreach ($Result in $TestResults | Where-Object { $_.Found }) {
     Write-Host "`n  Analyzing: $($Result.Website)" -ForegroundColor Cyan
     
     try {
@@ -249,7 +249,7 @@ if (-not (Test-Path $ExportFolder)) {
 
 $ExportFormats = @('CSV', 'JSON', 'HTML', 'XML')
 
-foreach ($Result in $TestResults | Where-Object {$_.Found} | Select-Object -First 1) {
+foreach ($Result in $TestResults | Where-Object { $_.Found } | Select-Object -First 1) {
     Write-Host "`n  Exporting events for: $($Result.Website)" -ForegroundColor Cyan
     
     foreach ($Format in $ExportFormats) {
