@@ -139,7 +139,7 @@ Describe "CAPI2Tools Module" {
             Export-CapiEvents -Events $script:MockEvents -Path $CsvPath -Format CSV
             
             Test-Path $CsvPath | Should Be $true
-            $CsvContent = Import-Csv $CsvPath
+            $CsvContent = @(Import-Csv $CsvPath)
             $CsvContent.Count | Should BeGreaterThan 0
             
             Remove-Item $CsvPath -Force -ErrorAction SilentlyContinue

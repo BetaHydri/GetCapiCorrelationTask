@@ -1162,12 +1162,12 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                     if ($IncludeErrorAnalysis) {
                         $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
                         if ($ErrorAnalysis) {
-                            $HtmlReport += "<h2>⚠️ Error Analysis</h2>"
+                            $HtmlReport += "<h2>Error Analysis</h2>"
                             $HtmlReport += $ErrorAnalysis | ConvertTo-Html -Fragment -Property TimeCreated, Severity, ErrorName, Certificate, Description, Resolution
                         }
                     }
                     
-                    $HtmlReport += "<h2>📋 Event Details</h2>"
+                    $HtmlReport += "<h2>Event Details</h2>"
                     $HtmlReport += $ExportData | ConvertTo-Html -Fragment -Property TimeCreated, ID, RecordType, EventName, Certificate
                     $HtmlReport += "</body></html>"
                     
@@ -1235,7 +1235,7 @@ function Compare-CapiEvents {
     )
     
     Write-Host "`n=== CAPI2 Event Comparison ===" -ForegroundColor Cyan
-    Write-Host "$ReferenceLabel Events: $($ReferenceEvents.Count) | $DifferenceLabel Events: $($DifferenceEvents.Count)`n" -ForegroundColor White
+    Write-Host "$ReferenceLabel Events: $($ReferenceEvents.Count) - $DifferenceLabel Events: $($DifferenceEvents.Count)`n" -ForegroundColor White
     
     # Get error analysis for both sets
     Write-Host "Analyzing $ReferenceLabel events..." -ForegroundColor Gray
@@ -1316,7 +1316,8 @@ function Compare-CapiEvents {
         Write-Host "`n$(Get-DisplayChar 'Warning') Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
     }
     else {
-        Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count ($RefErrorCount errors)" -ForegroundColor Yellow
+        $ErrorText = "$RefErrorCount errors"
+        Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count - $ErrorText" -ForegroundColor Yellow
     }
 }
 
