@@ -84,14 +84,20 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 
 ## 📥 Installation
 
-### Option 1: Direct Download
-
-1. Download `GetCapiCorrelationTask.ps1`
-2. Place it in your PowerShell module path or working directory
-3. Import the script:
+### Option 1: Module Installation (Recommended)
 
 ```powershell
-. .\GetCapiCorrelationTask.ps1
+# Copy module to user module directory
+$ModulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\CAPI2Tools"
+New-Item -Path $ModulePath -ItemType Directory -Force
+Copy-Item .\CAPI2Tools.psm1 -Destination $ModulePath
+
+# Import module
+Import-Module CAPI2Tools
+
+# Verify installation
+Get-Module CAPI2Tools
+Get-Command -Module CAPI2Tools
 ```
 
 ### Option 2: Clone Repository
@@ -99,19 +105,24 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 ```powershell
 git clone https://github.com/BetaHydri/GetCapiCorrelationTask.git
 cd GetCapiCorrelationTask
-. .\GetCapiCorrelationTask.ps1
+Import-Module .\CAPI2Tools.psm1
+
+# Or for temporary session import
+Import-Module .\CAPI2Tools.psm1 -Force
 ```
 
-### Option 3: Module Installation
+### Option 3: Direct Import (Temporary Session)
 
 ```powershell
-# Copy to user module directory
-$ModulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\GetCapiCorrelationTask"
-New-Item -Path $ModulePath -ItemType Directory -Force
-Copy-Item .\GetCapiCorrelationTask.ps1 -Destination $ModulePath
+# Import module directly without installation
+Import-Module "C:\Path\To\CAPI2Tools.psm1"
+```
 
-# Import module
-Import-Module GetCapiCorrelationTask
+### Persistent Import (Add to PowerShell Profile)
+
+```powershell
+# Add to your PowerShell profile for automatic loading
+Add-Content $PROFILE "`nImport-Module CAPI2Tools"
 ```
 
 ---
