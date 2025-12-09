@@ -14,6 +14,7 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 - [Overview](#-overview)
 - [Features](#-features)
+- [Command Reference](#-command-reference)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
@@ -74,6 +75,65 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 - **Root Cause Analysis**: Understand why certificate validation failed
 - **Resolution Guidance**: Get step-by-step fixes for common issues
 - **Severity Levels**: Prioritize critical vs. warning issues
+
+---
+
+## 📖 Command Reference
+
+The CAPI2Tools module provides 11 functions and 5 convenient aliases for certificate validation analysis and troubleshooting.
+
+### Functions
+
+| Command | Purpose |
+|---------|---------|
+| **`Find-CapiEventsByName`** | Search CAPI2 events by DNS name, certificate subject, or issuer. Returns complete correlation chains for matching certificates. |
+| **`Get-CapiTaskIDEvents`** | Retrieve all events in a correlation chain using a TaskID (GUID). Use when you have a specific TaskID from event logs. |
+| **`Get-CapiErrorAnalysis`** | Analyze events for errors and display comprehensive error tables with severity levels, descriptions, common causes, and resolution steps. |
+| **`Export-CapiEvents`** | Export events to CSV, JSON, HTML, or XML format. HTML exports include error analysis and color-coded severity indicators. |
+| **`Compare-CapiEvents`** | Compare two correlation chains (before/after) to identify resolved, new, or persistent errors. Useful for validating fixes. |
+| **`Enable-CAPI2EventLog`** | Enable the CAPI2 Operational event log for certificate validation logging. Requires administrator privileges. |
+| **`Disable-CAPI2EventLog`** | Disable CAPI2 logging to conserve system resources when troubleshooting is complete. Requires administrator privileges. |
+| **`Clear-CAPI2EventLog`** | Clear all CAPI2 events with optional backup. Use to start fresh troubleshooting sessions. Requires administrator privileges. |
+| **`Get-CAPI2EventLogStatus`** | Display current log status: enabled state, event count, size, oldest/newest event timestamps, and file path. |
+| **`Start-CAPI2Troubleshooting`** | Interactive troubleshooting session that enables logging, clears events, waits for issue reproduction, then analyzes results. |
+| **`Stop-CAPI2Troubleshooting`** | Complete troubleshooting by exporting events, disabling logging, and cleaning up. Pairs with `Start-CAPI2Troubleshooting`. |
+
+### Aliases
+
+Convenient shortcuts for commonly used commands:
+
+| Alias | Target Function | Purpose |
+|-------|----------------|---------|
+| **`Find-CertEvents`** | `Find-CapiEventsByName` | Shorter name for quick certificate event searches |
+| **`Get-CertChain`** | `Get-CapiTaskIDEvents` | Intuitive name for retrieving certificate chain events |
+| **`Enable-CapiLog`** | `Enable-CAPI2EventLog` | Quick enable with shorter typing |
+| **`Disable-CapiLog`** | `Disable-CAPI2EventLog` | Quick disable with shorter typing |
+| **`Clear-CapiLog`** | `Clear-CAPI2EventLog` | Quick clear with shorter typing |
+
+### Quick Reference Examples
+
+```powershell
+# Search for events (function or alias)
+Find-CapiEventsByName -Name "microsoft.com"
+Find-CertEvents -Name "microsoft.com"              # Same using alias
+
+# Get specific correlation chain
+Get-CapiTaskIDEvents -TaskID "12345678-1234-1234-1234-123456789abc"
+Get-CertChain -TaskID "12345678-1234-1234-1234-123456789abc"  # Same using alias
+
+# Manage event log
+Enable-CAPI2EventLog    # or Enable-CapiLog
+Disable-CAPI2EventLog   # or Disable-CapiLog
+Clear-CAPI2EventLog     # or Clear-CapiLog
+
+# Check log status
+Get-CAPI2EventLogStatus
+
+# Analyze and export
+$Events = Find-CertEvents -Name "example.com"
+Get-CapiErrorAnalysis -Events $Events[0].Events
+Export-CapiEvents -Events $Events[0].Events -Path "report.html" -Format HTML
+```
 
 ---
 
