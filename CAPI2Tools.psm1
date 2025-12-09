@@ -1119,6 +1119,15 @@ function Export-CapiEvents {
                     $XmlData | Export-Clixml -Path $Path
                 }
                 'HTML' {
+                    # Extract certificate name from events for header display
+                    $CertificateName = ""
+                    foreach ($evt in $ExportData) {
+                        if ($evt.Certificate) {
+                            $CertificateName = $evt.Certificate
+                            break
+                        }
+                    }
+                    
                     $HtmlReport = @"
 <!DOCTYPE html>
 <html>
@@ -1129,6 +1138,7 @@ function Export-CapiEvents {
         h1 { color: #0078d4; border-bottom: 3px solid #0078d4; padding-bottom: 10px; }
         h2 { color: #106ebe; margin-top: 30px; }
         .info { background: #e7f3ff; padding: 15px; border-left: 4px solid #0078d4; margin: 20px 0; }
+        .cert-name { font-size: 1.2em; color: #0078d4; font-weight: bold; margin-bottom: 10px; }
         table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         th { background: #0078d4; color: white; padding: 12px; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #ddd; }
@@ -1143,7 +1153,7 @@ function Export-CapiEvents {
 <body>
     <h1>🔐 CAPI2 Certificate Validation Report</h1>
     <div class="info">
-        <strong>Generated:</strong> $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")<br>
+$(if ($CertificateName) { "        <div class='cert-name'>Certificate: $CertificateName</div>`n" })        <strong>Generated:</strong> $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")<br>
         <strong>TaskID:</strong> $TaskID<br>
         <strong>Event Count:</strong> $($Events.Count)
     </div>
