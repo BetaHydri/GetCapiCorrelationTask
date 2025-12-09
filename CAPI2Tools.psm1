@@ -21,80 +21,80 @@
 # CAPI2 Error Code Reference
 $Script:CAPI2ErrorCodes = @{
     '0x80092013' = @{
-        Code = '0x80092013'
-        HexCode = 'CRYPT_E_REVOCATION_OFFLINE'
+        Code        = '0x80092013'
+        HexCode     = 'CRYPT_E_REVOCATION_OFFLINE'
         Description = 'The revocation function was unable to check revocation because the revocation server was offline.'
         CommonCause = 'Network connectivity issue, CRL/OCSP server unavailable, firewall blocking'
-        Resolution = 'Check network connectivity, verify CRL/OCSP URLs are accessible, check proxy settings'
-        Severity = 'Warning'
+        Resolution  = 'Check network connectivity, verify CRL/OCSP URLs are accessible, check proxy settings'
+        Severity    = 'Warning'
     }
     '0x80092012' = @{
-        Code = '0x80092012'
-        HexCode = 'CRYPT_E_REVOKED'
+        Code        = '0x80092012'
+        HexCode     = 'CRYPT_E_REVOKED'
         Description = 'The certificate has been explicitly revoked by its issuer.'
         CommonCause = 'Certificate has been revoked (compromised, replaced, or no longer trusted)'
-        Resolution = 'Obtain a new certificate from the CA, investigate why certificate was revoked'
-        Severity = 'Critical'
+        Resolution  = 'Obtain a new certificate from the CA, investigate why certificate was revoked'
+        Severity    = 'Critical'
     }
     '0x800B0101' = @{
-        Code = '0x800B0101'
-        HexCode = 'CERT_E_EXPIRED'
+        Code        = '0x800B0101'
+        HexCode     = 'CERT_E_EXPIRED'
         Description = 'A required certificate is not within its validity period.'
         CommonCause = 'Certificate has expired, system time is incorrect'
-        Resolution = 'Renew the certificate, verify system time is correct'
-        Severity = 'Critical'
+        Resolution  = 'Renew the certificate, verify system time is correct'
+        Severity    = 'Critical'
     }
     '0x800B010F' = @{
-        Code = '0x800B010F'
-        HexCode = 'CERT_E_CN_NO_MATCH'
+        Code        = '0x800B010F'
+        HexCode     = 'CERT_E_CN_NO_MATCH'
         Description = 'The certificate common name does not match the host name.'
         CommonCause = 'Certificate issued for different hostname, wildcard mismatch'
-        Resolution = 'Obtain certificate with correct CN/SAN, verify hostname is correct'
-        Severity = 'Critical'
+        Resolution  = 'Obtain certificate with correct CN/SAN, verify hostname is correct'
+        Severity    = 'Critical'
     }
     '0x800B0109' = @{
-        Code = '0x800B0109'
-        HexCode = 'CERT_E_UNTRUSTEDROOT'
+        Code        = '0x800B0109'
+        HexCode     = 'CERT_E_UNTRUSTEDROOT'
         Description = 'A certificate chain processed but terminated in a root certificate not trusted.'
         CommonCause = 'Root CA not in trusted store, self-signed certificate'
-        Resolution = 'Install root CA certificate, verify certificate chain'
-        Severity = 'Critical'
+        Resolution  = 'Install root CA certificate, verify certificate chain'
+        Severity    = 'Critical'
     }
     '0x800B010A' = @{
-        Code = '0x800B010A'
-        HexCode = 'CERT_E_CHAINING'
+        Code        = '0x800B010A'
+        HexCode     = 'CERT_E_CHAINING'
         Description = 'A certificate chain could not be built to a trusted root authority.'
         CommonCause = 'Intermediate certificate missing, broken certificate chain'
-        Resolution = 'Install missing intermediate certificates, verify certificate chain'
-        Severity = 'Critical'
+        Resolution  = 'Install missing intermediate certificates, verify certificate chain'
+        Severity    = 'Critical'
     }
     '0x80096004' = @{
-        Code = '0x80096004'
-        HexCode = 'TRUST_E_CERT_SIGNATURE'
+        Code        = '0x80096004'
+        HexCode     = 'TRUST_E_CERT_SIGNATURE'
         Description = 'The signature of the certificate cannot be verified.'
         CommonCause = 'Certificate has been tampered with, corrupted certificate'
-        Resolution = 'Re-download/re-install certificate, verify certificate source'
-        Severity = 'Critical'
+        Resolution  = 'Re-download/re-install certificate, verify certificate source'
+        Severity    = 'Critical'
     }
     '0x800B0111' = @{
-        Code = '0x800B0111'
-        HexCode = 'CERT_E_WRONG_USAGE'
+        Code        = '0x800B0111'
+        HexCode     = 'CERT_E_WRONG_USAGE'
         Description = 'The certificate is not valid for the requested usage.'
         CommonCause = 'Certificate used for wrong purpose (e.g., client auth vs server auth)'
-        Resolution = 'Obtain certificate with correct Extended Key Usage'
-        Severity = 'Error'
+        Resolution  = 'Obtain certificate with correct Extended Key Usage'
+        Severity    = 'Error'
     }
     '0x80092010' = @{
-        Code = '0x80092010'
-        HexCode = 'CRYPT_E_NOT_FOUND'
+        Code        = '0x80092010'
+        HexCode     = 'CRYPT_E_NOT_FOUND'
         Description = 'Cannot find object or property.'
         CommonCause = 'Certificate not found in store, missing certificate property'
-        Resolution = 'Verify certificate is installed, check certificate store'
-        Severity = 'Error'
+        Resolution  = 'Verify certificate is installed, check certificate store'
+        Severity    = 'Error'
     }
 }
 
-Function Get-CAPI2ErrorDetails {
+function Get-CAPI2ErrorDetails {
     <#
     .SYNOPSIS
         Translates CAPI2 error codes to human-readable descriptions with resolution steps.
@@ -112,14 +112,15 @@ Function Get-CAPI2ErrorDetails {
     
     if ($Script:CAPI2ErrorCodes.ContainsKey($ErrorCode)) {
         return $Script:CAPI2ErrorCodes[$ErrorCode]
-    } else {
+    }
+    else {
         return @{
-            Code = $ErrorCode
-            HexCode = 'UNKNOWN'
+            Code        = $ErrorCode
+            HexCode     = 'UNKNOWN'
             Description = 'Unknown error code'
             CommonCause = 'Unknown'
-            Resolution = 'Search Microsoft documentation for error code'
-            Severity = 'Unknown'
+            Resolution  = 'Search Microsoft documentation for error code'
+            Severity    = 'Unknown'
         }
     }
 }
@@ -128,7 +129,7 @@ Function Get-CAPI2ErrorDetails {
 
 #region Helper Functions for Display Characters
 
-Function Get-DisplayChar {
+function Get-DisplayChar {
     <#
     .SYNOPSIS
         Returns display characters compatible with PowerShell 5.1 and 7.
@@ -143,33 +144,33 @@ Function Get-DisplayChar {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet('BoxTopLeft', 'BoxTopRight', 'BoxBottomLeft', 'BoxBottomRight', 
-                     'BoxVertical', 'BoxHorizontal', 'Checkmark', 'CheckmarkBold',
-                     'Wrench', 'Flag', 'Lightbulb', 'Warning', 'Lock', 'Clipboard',
-                     'RightArrow', 'Bullet')]
+            'BoxVertical', 'BoxHorizontal', 'Checkmark', 'CheckmarkBold',
+            'Wrench', 'Flag', 'Lightbulb', 'Warning', 'Lock', 'Clipboard',
+            'RightArrow', 'Bullet')]
         [string]$Name
     )
     
     switch ($Name) {
-        'BoxTopLeft'     { return [char]0x2554 }  # ╔
-        'BoxTopRight'    { return [char]0x2557 }  # ╗
-        'BoxBottomLeft'  { return [char]0x255A }  # ╚
+        'BoxTopLeft' { return [char]0x2554 }  # ╔
+        'BoxTopRight' { return [char]0x2557 }  # ╗
+        'BoxBottomLeft' { return [char]0x255A }  # ╚
         'BoxBottomRight' { return [char]0x255D }  # ╝
-        'BoxVertical'    { return [char]0x2551 }  # ║
-        'BoxHorizontal'  { return [char]0x2550 }  # ═
-        'Checkmark'      { return [char]0x2713 }  # ✓
-        'CheckmarkBold'  { return [char]0x2705 }  # ✅
-        'Wrench'         { return [char]0x1F527 } # 🔧
-        'Flag'           { return [char]0x1F3C1 } # 🏁
-        'Lightbulb'      { return [char]0x1F4A1 } # 💡
-        'Warning'        { return [char]0x26A0 }  # ⚠
-        'Lock'           { return [char]0x1F512 } # 🔐
-        'Clipboard'      { return [char]0x1F4CB } # 📋
-        'RightArrow'     { return [char]0x2192 }  # →
-        'Bullet'         { return '*' }           # *
+        'BoxVertical' { return [char]0x2551 }  # ║
+        'BoxHorizontal' { return [char]0x2550 }  # ═
+        'Checkmark' { return [char]0x2713 }  # ✓
+        'CheckmarkBold' { return [char]0x2705 }  # ✅
+        'Wrench' { return [char]0x1F527 } # 🔧
+        'Flag' { return [char]0x1F3C1 } # 🏁
+        'Lightbulb' { return [char]0x1F4A1 } # 💡
+        'Warning' { return [char]0x26A0 }  # ⚠
+        'Lock' { return [char]0x1F512 } # 🔐
+        'Clipboard' { return [char]0x1F4CB } # 📋
+        'RightArrow' { return [char]0x2192 }  # →
+        'Bullet' { return '*' }           # *
     }
 }
 
-Function Write-BoxHeader {
+function Write-BoxHeader {
     <#
     .SYNOPSIS
         Writes a formatted box header to the console.
@@ -203,7 +204,8 @@ Function Write-BoxHeader {
     
     $DisplayText = if ($Icon) {
         "$(Get-DisplayChar $Icon) $Text"
-    } else {
+    }
+    else {
         $Text
     }
     
@@ -225,7 +227,7 @@ Function Write-BoxHeader {
 
 #region CAPI2 Event Log Management Functions
 
-Function Enable-CAPI2EventLog {
+function Enable-CAPI2EventLog {
     <#
     .SYNOPSIS
         Enables the CAPI2 Operational event log for certificate troubleshooting.
@@ -266,16 +268,18 @@ Function Enable-CAPI2EventLog {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully enabled." -ForegroundColor Green
                 Write-Host "  Certificate validation events will now be logged." -ForegroundColor Gray
-            } else {
+            }
+            else {
                 Write-Error "Failed to enable CAPI2 Event Log. Exit code: $LASTEXITCODE"
             }
         }
-    } catch {
+    }
+    catch {
         Write-Error "Error enabling CAPI2 Event Log: $($_.Exception.Message)"
     }
 }
 
-Function Disable-CAPI2EventLog {
+function Disable-CAPI2EventLog {
     <#
     .SYNOPSIS
         Disables the CAPI2 Operational event log.
@@ -316,16 +320,18 @@ Function Disable-CAPI2EventLog {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully disabled." -ForegroundColor Green
                 Write-Host "  Certificate validation events will no longer be logged." -ForegroundColor Gray
-            } else {
+            }
+            else {
                 Write-Error "Failed to disable CAPI2 Event Log. Exit code: $LASTEXITCODE"
             }
         }
-    } catch {
+    }
+    catch {
         Write-Error "Error disabling CAPI2 Event Log: $($_.Exception.Message)"
     }
 }
 
-Function Clear-CAPI2EventLog {
+function Clear-CAPI2EventLog {
     <#
     .SYNOPSIS
         Clears all events from the CAPI2 Operational event log.
@@ -378,7 +384,8 @@ Function Clear-CAPI2EventLog {
                 
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "$(Get-DisplayChar 'Checkmark') Backup completed successfully." -ForegroundColor Green
-                } else {
+                }
+                else {
                     Write-Error "Failed to backup CAPI2 Event Log. Exit code: $LASTEXITCODE"
                     return
                 }
@@ -393,16 +400,18 @@ Function Clear-CAPI2EventLog {
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "$(Get-DisplayChar 'Checkmark') CAPI2 Event Log successfully cleared." -ForegroundColor Green
                 Write-Host "  $EventCount events removed. Log is now empty." -ForegroundColor Gray
-            } else {
+            }
+            else {
                 Write-Error "Failed to clear CAPI2 Event Log. Exit code: $LASTEXITCODE"
             }
         }
-    } catch {
+    }
+    catch {
         Write-Error "Error clearing CAPI2 Event Log: $($_.Exception.Message)"
     }
 }
 
-Function Get-CAPI2EventLogStatus {
+function Get-CAPI2EventLogStatus {
     <#
     .SYNOPSIS
         Displays the current status of the CAPI2 Operational event log.
@@ -436,7 +445,8 @@ Function Get-CAPI2EventLogStatus {
         Write-Host "Status:          " -NoNewline
         if ($Enabled -eq "true") {
             Write-Host "ENABLED" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "DISABLED" -ForegroundColor Red
         }
         
@@ -461,14 +471,15 @@ Function Get-CAPI2EventLogStatus {
             Write-Host "$(Get-DisplayChar 'Lightbulb') Tip: No events found. Perform certificate operations to generate events." -ForegroundColor Yellow
         }
         
-    } catch {
+    }
+    catch {
         Write-Error "Error retrieving CAPI2 Event Log status: $($_.Exception.Message)"
     }
 }
 
 #endregion
 
-Function Find-CapiEventsByName {
+function Find-CapiEventsByName {
     <#
       .SYNOPSIS
           Searches CAPI2 events by DNS name or certificate subject name and retrieves all correlated events.
@@ -528,12 +539,12 @@ Function Find-CapiEventsByName {
         $IncludePattern
     )
     
-    Begin {
+    begin {
         Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
         $StartTime = (Get-Date).AddHours(-$Hours)
     }
     
-    Process {
+    process {
         try {
             Write-Host "Searching for certificate events containing '$Name' in the last $Hours hours..." -ForegroundColor Cyan
             
@@ -568,7 +579,8 @@ Function Find-CapiEventsByName {
                     if ($XmlString -like $WildcardPattern) {
                         if ($IncludePattern) {
                             $XmlString -like "*$IncludePattern*"
-                        } else {
+                        }
+                        else {
                             $true
                         }
                     }
@@ -590,7 +602,8 @@ Function Find-CapiEventsByName {
                             }
                         }
                     }
-                } catch {
+                }
+                catch {
                     Write-Verbose "Could not extract TaskID from event: $_"
                 }
             } | Select-Object -Property TaskID, TimeCreated, Preview -Unique | Sort-Object -Property TimeCreated -Descending
@@ -619,11 +632,11 @@ Function Find-CapiEventsByName {
                 
                 if ($CorrelatedEvents) {
                     $AllResults += [PSCustomObject]@{
-                        TaskID        = $Match.TaskID
-                        TimeCreated   = $Match.TimeCreated
-                        EventCount    = $CorrelatedEvents.Count
-                        Events        = $CorrelatedEvents
-                        SearchTerm    = $Name
+                        TaskID      = $Match.TaskID
+                        TimeCreated = $Match.TimeCreated
+                        EventCount  = $CorrelatedEvents.Count
+                        Events      = $CorrelatedEvents
+                        SearchTerm  = $Name
                     }
                 }
             }
@@ -632,17 +645,18 @@ Function Find-CapiEventsByName {
             
             return $AllResults
             
-        } catch {
+        }
+        catch {
             Write-Warning "Error during search: $($_.Exception.Message)"
         }
     }
     
-    End {
+    end {
         Write-Verbose "[END    ] Ending: $($MyInvocation.Mycommand)"
     }
 }
 
-Function Get-CapiTaskIDEvents {
+function Get-CapiTaskIDEvents {
     <#
       .SYNOPSIS
           Retrieves all CAPI2 events that share the same correlation TaskID.
@@ -700,34 +714,34 @@ Function Get-CapiTaskIDEvents {
   
         $Events = Get-WinEvent -FilterXPath $Query -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated 
         if ($null -ne $Events) {
-            Return $Events
+            return $Events
         }
         else {
             Write-Host "No Capi2 Event were found with the CorrelationID $TaskID" -ForegroundColor Yellow
             exit
         }
     }
-    Catch {
+    catch {
         Write-Warning -Message $_.Exception.Message
     }
 }
   
-Function Convert-EventLogRecord {
+function Convert-EventLogRecord {
   
     [cmdletbinding()]
     [alias("clr")]
   
-    Param(
+    param(
         [Parameter(Position = 0, Mandatory, ValueFromPipeline)]
         [ValidateNotNullorEmpty()]
         [System.Diagnostics.Eventing.Reader.EventLogRecord[]]$LogRecord
     )
   
-    Begin {
+    begin {
         Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
     } #begin
   
-    Process {
+    process {
         foreach ($record in $LogRecord) {
             Write-Verbose "[PROCESS] Processing event id $($record.ID) from $($record.logname) log on $($record.machinename)"
             Write-Verbose "[PROCESS] Creating XML data"
@@ -810,12 +824,12 @@ Function Convert-EventLogRecord {
         } #foreach record
     } #process
   
-    End {
+    end {
         Write-Verbose "[END    ] Ending: $($MyInvocation.Mycommand)"
     } #end
 }
   
-Function Format-XML ([xml]$Xml, $Indent = 3) { 
+function Format-XML ([xml]$Xml, $Indent = 3) { 
     $StringWriter = New-Object System.IO.StringWriter 
     $XmlWriter = New-Object System.XMl.XmlTextWriter $StringWriter 
     $XmlWriter.Formatting = "Indented"
@@ -828,7 +842,7 @@ Function Format-XML ([xml]$Xml, $Indent = 3) {
 
 #region Analysis and Export Functions
 
-Function Get-CapiErrorAnalysis {
+function Get-CapiErrorAnalysis {
     <#
     .SYNOPSIS
         Analyzes CAPI2 events and presents errors in a comprehensive table format.
@@ -860,12 +874,12 @@ Function Get-CapiErrorAnalysis {
         [switch]$IncludeSummary
     )
     
-    Begin {
+    begin {
         $ErrorTable = @()
         $ErrorSummary = @{}
     }
     
-    Process {
+    process {
         foreach ($Event in $Events) {
             # Parse XML to find error codes
             try {
@@ -908,17 +922,17 @@ Function Get-CapiErrorAnalysis {
                     
                     # Create error entry
                     $ErrorEntry = [PSCustomObject]@{
-                        TimeCreated     = $Event.TimeCreated
-                        EventID         = $Event.ID
-                        Severity        = $ErrorDetails.Severity
-                        ErrorCode       = $ErrorDetails.Code
-                        ErrorName       = $ErrorDetails.HexCode
-                        Description     = $ErrorDetails.Description
-                        Certificate     = $CertSubject
-                        Issuer          = $CertIssuer
-                        Process         = $ProcessName
-                        CommonCause     = $ErrorDetails.CommonCause
-                        Resolution      = $ErrorDetails.Resolution
+                        TimeCreated = $Event.TimeCreated
+                        EventID     = $Event.ID
+                        Severity    = $ErrorDetails.Severity
+                        ErrorCode   = $ErrorDetails.Code
+                        ErrorName   = $ErrorDetails.HexCode
+                        Description = $ErrorDetails.Description
+                        Certificate = $CertSubject
+                        Issuer      = $CertIssuer
+                        Process     = $ProcessName
+                        CommonCause = $ErrorDetails.CommonCause
+                        Resolution  = $ErrorDetails.Resolution
                     }
                     
                     $ErrorTable += $ErrorEntry
@@ -926,17 +940,19 @@ Function Get-CapiErrorAnalysis {
                     # Count for summary
                     if ($ErrorSummary.ContainsKey($ErrorDetails.HexCode)) {
                         $ErrorSummary[$ErrorDetails.HexCode]++
-                    } else {
+                    }
+                    else {
                         $ErrorSummary[$ErrorDetails.HexCode] = 1
                     }
                 }
-            } catch {
+            }
+            catch {
                 Write-Verbose "Could not parse event ID $($Event.ID): $_"
             }
         }
     }
     
-    End {
+    end {
         if ($ErrorTable.Count -eq 0) {
             Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
             Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
@@ -982,7 +998,7 @@ Function Get-CapiErrorAnalysis {
     }
 }
 
-Function Export-CapiEvents {
+function Export-CapiEvents {
     <#
     .SYNOPSIS
         Exports CAPI2 events to various formats (CSV, JSON, HTML, XML).
@@ -1036,7 +1052,7 @@ Function Export-CapiEvents {
         [string]$TaskID
     )
     
-    Begin {
+    begin {
         # Determine format from file extension if not specified
         if (-not $Format) {
             $Extension = [System.IO.Path]::GetExtension($Path).ToLower()
@@ -1052,17 +1068,19 @@ Function Export-CapiEvents {
         Write-Host "Exporting $($Events.Count) event(s) to $Format format..." -ForegroundColor Cyan
     }
     
-    Process {
+    process {
         try {
             # Prepare data for export
             $ExportData = $Events | Select-Object TimeCreated, ID, RecordType, 
-                @{N='EventName';E={
+            @{N = 'EventName'; E = {
                     if ($_.DetailedMessage -match '<(\w+)\s') { $matches[1] } else { 'Unknown' }
-                }},
-                @{N='Certificate';E={
+                }
+            },
+            @{N = 'Certificate'; E = {
                     if ($_.DetailedMessage -match 'subjectName="([^"]+)"') { $matches[1] } else { '' }
-                }},
-                @{N='Details';E={ $_.DetailedMessage }}
+                }
+            },
+            @{N = 'Details'; E = { $_.DetailedMessage } }
             
             switch ($Format) {
                 'CSV' {
@@ -1070,10 +1088,10 @@ Function Export-CapiEvents {
                 }
                 'JSON' {
                     $JsonData = @{
-                        TaskID = $TaskID
+                        TaskID     = $TaskID
                         ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
                         EventCount = $Events.Count
-                        Events = $ExportData
+                        Events     = $ExportData
                     }
                     
                     if ($IncludeErrorAnalysis) {
@@ -1085,9 +1103,9 @@ Function Export-CapiEvents {
                 }
                 'XML' {
                     $XmlData = @{
-                        TaskID = $TaskID
+                        TaskID     = $TaskID
                         ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                        Events = $ExportData
+                        Events     = $ExportData
                     }
                     
                     $XmlData | Export-Clixml -Path $Path
@@ -1142,13 +1160,14 @@ Function Export-CapiEvents {
             Write-Host "$(Get-DisplayChar 'Checkmark') Export completed successfully: $Path" -ForegroundColor Green
             Write-Host "  Format: $Format | Size: $([math]::Round((Get-Item $Path).Length / 1KB, 2)) KB" -ForegroundColor Gray
             
-        } catch {
+        }
+        catch {
             Write-Error "Failed to export events: $($_.Exception.Message)"
         }
     }
 }
 
-Function Compare-CapiEvents {
+function Compare-CapiEvents {
     <#
     .SYNOPSIS
         Compares two CAPI2 event correlation chains to identify changes or resolved errors.
@@ -1274,9 +1293,11 @@ Function Compare-CapiEvents {
     
     if ($DiffErrorCount -lt $RefErrorCount) {
         Write-Host "`n$(Get-DisplayChar 'Checkmark') Overall improvement: Error count reduced from $RefErrorCount to $DiffErrorCount" -ForegroundColor Green
-    } elseif ($DiffErrorCount -gt $RefErrorCount) {
+    }
+    elseif ($DiffErrorCount -gt $RefErrorCount) {
         Write-Host "`n$(Get-DisplayChar 'Warning') Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
-    } else {
+    }
+    else {
         Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count ($RefErrorCount errors)" -ForegroundColor Yellow
     }
 }
@@ -1285,7 +1306,7 @@ Function Compare-CapiEvents {
 
 #region Workflow Helper Functions
 
-Function Start-CAPI2Troubleshooting {
+function Start-CAPI2Troubleshooting {
     <#
     .SYNOPSIS
         Prepares the CAPI2 event log for a fresh troubleshooting session.
@@ -1341,10 +1362,12 @@ Function Start-CAPI2Troubleshooting {
         Write-Host "`n[Step 2/3] Clearing CAPI2 Event Log..." -ForegroundColor Yellow
         if ($BackupPath) {
             Clear-CAPI2EventLog -Backup $BackupPath
-        } else {
+        }
+        else {
             Clear-CAPI2EventLog
         }
-    } else {
+    }
+    else {
         Write-Host "`n[Step 2/3] Keeping existing events (use -ClearLog to clear)" -ForegroundColor Gray
     }
     
@@ -1360,7 +1383,7 @@ Function Start-CAPI2Troubleshooting {
     Write-Host "   4. When done, run: Stop-CAPI2Troubleshooting`n" -ForegroundColor Gray
 }
 
-Function Stop-CAPI2Troubleshooting {
+function Stop-CAPI2Troubleshooting {
     <#
     .SYNOPSIS
         Completes the CAPI2 troubleshooting session and optionally disables logging.
@@ -1418,13 +1441,16 @@ Function Stop-CAPI2Troubleshooting {
             wevtutil.exe epl Microsoft-Windows-CAPI2/Operational "$ExportPath"
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "$(Get-DisplayChar 'Checkmark') Events exported to: $ExportPath" -ForegroundColor Green
-            } else {
+            }
+            else {
                 Write-Warning "Failed to export events. Exit code: $LASTEXITCODE"
             }
-        } catch {
+        }
+        catch {
             Write-Warning "Error exporting events: $($_.Exception.Message)"
         }
-    } else {
+    }
+    else {
         Write-Host "`n[Step 2/3] No export requested (use -ExportPath to save events)" -ForegroundColor Gray
     }
     
@@ -1432,7 +1458,8 @@ Function Stop-CAPI2Troubleshooting {
     Write-Host "`n[Step 3/3] CAPI2 Logging..." -ForegroundColor Yellow
     if ($DisableLog) {
         Disable-CAPI2EventLog
-    } else {
+    }
+    else {
         Write-Host "  Logging remains ENABLED (use -DisableLog to disable)" -ForegroundColor Gray
     }
     
