@@ -110,12 +110,12 @@ Describe "CAPI2Tools Module" {
         # These tests verify the function exists in the module scope
         
         It "Should have Get-DisplayChar function defined in module" {
-            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -Name Get-DisplayChar -ErrorAction SilentlyContinue })
+            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Get-DisplayChar -ErrorAction SilentlyContinue })
             $ModuleFunctions | Should Not BeNullOrEmpty
         }
         
         It "Should have Write-BoxHeader function defined in module" {
-            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -Name Write-BoxHeader -ErrorAction SilentlyContinue })
+            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Write-BoxHeader -ErrorAction SilentlyContinue })
             $ModuleFunctions | Should Not BeNullOrEmpty
         }
     }
@@ -125,9 +125,9 @@ Describe "CAPI2Tools Module" {
         # Create mock event data once for all tests
         $script:MockEvents = @(
             [PSCustomObject]@{
-                TimeCreated = Get-Date
-                ID = 11
-                RecordType = 'Information'
+                TimeCreated     = Get-Date
+                ID              = 11
+                RecordType      = 'Information'
                 DetailedMessage = '<CertGetCertificateChain xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate subjectName="CN=test.com" /></CertGetCertificateChain>'
             }
         )
@@ -190,8 +190,8 @@ Describe "CAPI2Tools Module" {
         It "Should return null for events with no errors" {
             $MockGoodEvents = @(
                 [PSCustomObject]@{
-                    TimeCreated = Get-Date
-                    ID = 11
+                    TimeCreated     = Get-Date
+                    ID              = 11
                     DetailedMessage = '<Result value="0"/>'
                 }
             )
@@ -255,9 +255,9 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should handle complete export workflow for CSV" {
             $MockEvents = @(
                 [PSCustomObject]@{
-                    TimeCreated = Get-Date
-                    ID = 11
-                    RecordType = 'Information'
+                    TimeCreated     = Get-Date
+                    ID              = 11
+                    RecordType      = 'Information'
                     DetailedMessage = '<CertGetCertificateChain xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate subjectName="CN=example.com" /></CertGetCertificateChain>'
                 }
             )
@@ -274,9 +274,9 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should handle error analysis on mock error events" {
             $MockErrorEvents = @(
                 [PSCustomObject]@{
-                    TimeCreated = Get-Date
-                    ID = 30
-                    RecordType = 'Error'
+                    TimeCreated     = Get-Date
+                    ID              = 30
+                    RecordType      = 'Error'
                     DetailedMessage = '<Result value="0x800B0101"/>'
                 }
             )
