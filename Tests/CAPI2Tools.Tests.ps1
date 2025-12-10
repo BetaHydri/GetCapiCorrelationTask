@@ -234,7 +234,7 @@ Describe "CAPI2Tools Module" {
                 }
             )
             
-            $Result = Get-CapiErrorAnalysis -Events $MockEvent30Error
+            $Result = Get-CapiErrorAnalysis -Events $MockEvent30Error 2>&1 | Where-Object { $_ -is [PSCustomObject] -and $_.PSObject.Properties['ErrorCode'] }
             # Should detect the actual error code in Result node
             $Result | Should Not BeNullOrEmpty
             $Result[0].ErrorCode | Should Be '0x800B0101'
