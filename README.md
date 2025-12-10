@@ -645,27 +645,141 @@ $After = Find-CapiEventsByName -Name "myapp.company.com"
 Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events
 ```
 
-### Example 5: Investigate Specific Error Types
+### Example 5: Investigate Specific Error Types with FilterType
 
+FilterType provides intuitive filtering with tab completion for common scenarios:
+
+#### **Revocation Issues**
 ```powershell
-# ⭐ Use FilterType for common scenarios (with autocomplete)
+# Find revocation check failures (CRL/OCSP)
 $Results = Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation
-
-# Find certificate expiration issues
-$ExpiredCerts = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Expired
-
-# Find trust chain issues
-$TrustIssues = Find-CapiEventsByName -Name "internal-site.com" -FilterType Untrusted
-
-# Analyze first chain
 $Analysis = Get-CapiErrorAnalysis -Events $Results[0].Events
 
-# Filter for critical errors only
-$CriticalErrors = $Analysis | Where-Object { $_.Severity -eq "Critical" }
-$CriticalErrors | Format-Table ErrorName, Certificate, Thumbprint, Resolution -Wrap
+# Example output:
+# ErrorCode   : 0x80092013 (CRYPT_E_REVOCATION_OFFLINE)
+# ErrorName   : CRYPT_E_REVOCATION_OFFLINE
+# Severity    : Warning
+# Certificate : CN=*.microsoft.com
+# Thumbprint  : A1B2C3D4E5F6071829384756ABCDEF1234567890
+# Description : Revocation server offline - cannot verify revocation status
+# Resolution  : 1. Check network connectivity
+#               2. Verify firewall allows access to CRL/OCSP URLs
+#               3. Test CRL Distribution Points manually
+```
 
-# Advanced: Custom pattern filtering
-$CustomResults = Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
+#### **Expired Certificates**
+```powershell
+# Find certificate expiration issues
+$ExpiredCerts = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Expired
+$Analysis = Get-CapiErrorAnalysis -Events $ExpiredCerts[0].Events
+
+# Example output:
+# ErrorCode   : 0x800B0101 (CERT_E_EXPIRED)
+# ErrorName   : CERT_E_EXPIRED
+# Severity    : Critical
+# Certificate : CN=legacy.contoso.com
+# Thumbprint  : 9876543210FEDCBA9876543210FEDCBA98765432
+# Description : Certificate has expired and is not valid
+# Resolution  : 1. Renew the certificate immediately
+#               2. Verify system clock is correct
+#               3. Check certificate NotAfter date
+```
+
+#### **Untrusted Certificates**
+```powershell
+# Find trust chain failures
+$TrustIssues = Find-CapiEventsByName -Name "internal-site.com" -FilterType Untrusted
+$Analysis = Get-CapiErrorAnalysis -Events $TrustIssues[0].Events
+
+# Example output:
+# ErrorCode   : 0x800B0109 (CERT_E_UNTRUSTEDROOT)
+# ErrorName   : CERT_E_UNTRUSTEDROOT
+# Severity    : Critical
+# Certificate : CN=Internal Root CA
+# Thumbprint  : FEDCBA0987654321FEDCBA0987654321FEDCBA09
+# Description : Certificate chain terminates in untrusted root certificate
+# Resolution  : 1. Install root CA certificate to Trusted Root store
+#               2. Verify certificate chain is complete
+#               3. Check Group Policy certificate deployment
+```
+
+#### **Chain Building Problems**
+```powershell
+# Find certificate chain construction failures
+$ChainIssues = Find-CapiEventsByName -Name "api.example.com" -FilterType ChainBuilding
+$Analysis = Get-CapiErrorAnalysis -Events $ChainIssues[0].Events
+
+# Example output:
+# ErrorCode   : 0x800B010A (CERT_E_CHAINING)
+# ErrorName   : CERT_E_CHAINING
+# Severity    : Critical
+# Certificate : CN=api.example.com
+# Thumbprint  : 1234567890ABCDEF1234567890ABCDEF12345678
+# Function    : CertGetCertificateChain
+# Description : Cannot build complete certificate chain to trusted root
+# Resolution  : 1. Install missing intermediate certificates
+#               2. Verify AIA (Authority Information Access) URLs are accessible
+#               3. Check certificate store contains all chain members
+```
+
+#### **Policy Validation Failures**
+```powershell
+# Find certificate policy validation errors
+$PolicyIssues = Find-CapiEventsByName -Name "secure.bank.com" -FilterType PolicyValidation
+$Analysis = Get-CapiErrorAnalysis -Events $PolicyIssues[0].Events
+
+# Example output:
+# ErrorCode   : 0x800B0111 (CERT_E_WRONG_USAGE)
+# ErrorName   : CERT_E_WRONG_USAGE
+# Severity    : Critical
+# Certificate : CN=secure.bank.com
+# Thumbprint  : ABCDEF1234567890ABCDEF1234567890ABCDEF12
+# Function    : CertVerifyCertificateChainPolicy
+# Description : Certificate not valid for requested usage
+# Resolution  : 1. Verify certificate has correct Enhanced Key Usage (EKU)
+#               2. Request new certificate with Server Authentication (1.3.6.1.5.5.7.3.1)
+#               3. Check application policy requirements
+```
+
+#### **Signature Validation**
+```powershell
+# Find digital signature verification failures
+$SigIssues = Find-CapiEventsByName -Name "download.company.com" -FilterType SignatureValidation
+$Analysis = Get-CapiErrorAnalysis -Events $SigIssues[0].Events
+
+# Example output:
+# ErrorCode   : 0x80096004 (TRUST_E_CERT_SIGNATURE)
+# ErrorName   : TRUST_E_CERT_SIGNATURE
+# Severity    : Critical
+# Certificate : CN=Code Signing Certificate
+# Thumbprint  : 567890ABCDEF1234567890ABCDEF1234567890AB
+# Description : Certificate signature verification failed
+# Resolution  : 1. Re-download certificate from trusted source
+#               2. Verify certificate has not been tampered with
+#               3. Check issuer certificate is valid and trusted
+```
+
+#### **All Errors Only**
+```powershell
+# Find all events with errors (Result value present)
+$ErrorsOnly = Find-CapiEventsByName -Name "*.domain.com" -FilterType ErrorsOnly
+$Analysis = Get-CapiErrorAnalysis -Events $ErrorsOnly[0].Events -IncludeSummary
+
+# Example output summary:
+# Total Errors    : 3
+# Critical        : 2
+# Warning         : 1
+# Info            : 0
+# Unique Errors   : 2 (CERT_E_EXPIRED, CRYPT_E_REVOCATION_OFFLINE)
+# Certificates    : CN=app.domain.com, CN=api.domain.com
+```
+
+#### **Advanced: Custom Pattern Filtering**
+```powershell
+# For specific scenarios not covered by FilterType
+$OCSPOnly = Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
+$SpecificError = Find-CapiEventsByName -Name "site.com" -IncludePattern "*0x800B0101*"
+$MultiPattern = Find-CapiEventsByName -Name "site.com" -IncludePattern "*CRL*|*AIA*"
 ```
 
 ### Example 6: Bulk Analysis and Reporting
@@ -696,7 +810,93 @@ foreach ($Site in $Sites) {
 }
 ```
 
-### Example 7: Monitor Application Certificate Usage
+### Example 7: Comparative Error Analysis Across Environments
+
+Compare certificate issues between production and staging environments:
+
+```powershell
+# Production environment analysis
+Write-Host "`n=== Production Environment ===" -ForegroundColor Cyan
+$ProdErrors = Find-CapiEventsByName -Name "*.prod.contoso.com" -FilterType ErrorsOnly -Hours 24
+$ProdAnalysis = Get-CapiErrorAnalysis -Events $ProdErrors[0].Events
+
+# Staging environment analysis
+Write-Host "`n=== Staging Environment ===" -ForegroundColor Cyan
+$StagingErrors = Find-CapiEventsByName -Name "*.staging.contoso.com" -FilterType ErrorsOnly -Hours 24
+$StagingAnalysis = Get-CapiErrorAnalysis -Events $StagingErrors[0].Events
+
+# Compare error types
+Write-Host "`n=== Error Comparison ===" -ForegroundColor Yellow
+$ProdErrorTypes = $ProdAnalysis | Group-Object ErrorName | Select-Object Name, Count
+$StagingErrorTypes = $StagingAnalysis | Group-Object ErrorName | Select-Object Name, Count
+
+# Create comparison table
+$Comparison = @()
+$AllErrorTypes = ($ProdErrorTypes.Name + $StagingErrorTypes.Name) | Select-Object -Unique
+
+foreach ($ErrorType in $AllErrorTypes) {
+    $ProdCount = ($ProdErrorTypes | Where-Object { $_.Name -eq $ErrorType }).Count
+    $StageCount = ($StagingErrorTypes | Where-Object { $_.Name -eq $ErrorType }).Count
+    
+    $Comparison += [PSCustomObject]@{
+        ErrorType = $ErrorType
+        Production = if ($ProdCount) { $ProdCount } else { 0 }
+        Staging = if ($StageCount) { $StageCount } else { 0 }
+        Delta = ($ProdCount - $StageCount)
+    }
+}
+
+$Comparison | Format-Table -AutoSize
+
+# Example output:
+# ErrorType                    Production Staging Delta
+# ---------                    ---------- ------- -----
+# CERT_E_EXPIRED                        3       0     3
+# CRYPT_E_REVOCATION_OFFLINE            5       2     3
+# CERT_E_UNTRUSTEDROOT                  0       4    -4
+# CERT_E_CHAINING                       2       1     1
+
+# Identify environment-specific issues
+Write-Host "`n=== Production-Only Issues ===" -ForegroundColor Red
+$Comparison | Where-Object { $_.Production -gt 0 -and $_.Staging -eq 0 } | Format-Table
+
+Write-Host "`n=== Staging-Only Issues ===" -ForegroundColor Yellow
+$Comparison | Where-Object { $_.Staging -gt 0 -and $_.Production -eq 0 } | Format-Table
+
+# Deep dive into specific error type
+Write-Host "`n=== Revocation Issues Detail ===" -ForegroundColor Yellow
+$ProdRevocation = Find-CapiEventsByName -Name "*.prod.contoso.com" -FilterType Revocation
+$StageRevocation = Find-CapiEventsByName -Name "*.staging.contoso.com" -FilterType Revocation
+
+Write-Host "Production Revocation Failures:" -ForegroundColor White
+Get-CapiErrorAnalysis -Events $ProdRevocation[0].Events | Select-Object Certificate, Thumbprint, ErrorName
+
+# Output:
+# Certificate              Thumbprint                               ErrorName
+# -----------              ----------                               ---------
+# CN=api.prod.contoso.com  A1B2C3D4E5F6071829384756ABCDEF1234567890 CRYPT_E_REVOCATION_OFFLINE
+# CN=web.prod.contoso.com  1234567890ABCDEF1234567890ABCDEF12345678 CRYPT_E_REVOCATION_OFFLINE
+
+Write-Host "`nStaging Revocation Failures:" -ForegroundColor White
+Get-CapiErrorAnalysis -Events $StageRevocation[0].Events | Select-Object Certificate, Thumbprint, ErrorName
+
+# Generate environment comparison report
+Export-CapiEvents -Events $ProdErrors[0].Events `
+                  -Path "C:\Reports\Prod_Analysis.html" `
+                  -Format HTML `
+                  -IncludeErrorAnalysis `
+                  -TaskID $ProdErrors[0].TaskID
+
+Export-CapiEvents -Events $StagingErrors[0].Events `
+                  -Path "C:\Reports\Staging_Analysis.html" `
+                  -Format HTML `
+                  -IncludeErrorAnalysis `
+                  -TaskID $StagingErrors[0].TaskID
+
+Write-Host "`nReports generated for comparison" -ForegroundColor Green
+```
+
+### Example 8: Monitor Application Certificate Usage
 
 ```powershell
 # Enable logging
@@ -717,7 +917,307 @@ $AppEvents = $Results | ForEach-Object {
 Get-CapiErrorAnalysis -Events $AppEvents
 ```
 
-### Example 8: Process Multiple Certificate Chains
+### Example 8: Systematic Troubleshooting Workflow
+
+This example demonstrates a complete troubleshooting workflow using different FilterTypes:
+
+```powershell
+# Step 1: Start with ErrorsOnly to get overview
+Write-Host "`n=== Step 1: Finding All Errors ===" -ForegroundColor Cyan
+$AllErrors = Find-CapiEventsByName -Name "*.contoso.com" -FilterType ErrorsOnly -Hours 24
+$Summary = Get-CapiErrorAnalysis -Events $AllErrors[0].Events -IncludeSummary
+
+# Output:
+# Total Errors    : 8
+# Critical        : 5
+# Warning         : 3
+# Info            : 0
+# Unique Errors   : 4
+# TaskID          : C4D5E6F7-8901-2345-6789-0ABCDEF12345
+
+# Step 2: Check for expiration issues
+Write-Host "`n=== Step 2: Checking Certificate Expiration ===" -ForegroundColor Yellow
+$Expired = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Expired -Hours 24
+if ($Expired) {
+    $ExpiredAnalysis = Get-CapiErrorAnalysis -Events $Expired[0].Events
+    $ExpiredAnalysis | Format-Table ErrorName, Certificate, Thumbprint, Resolution -Wrap
+    
+    # Output:
+    # ErrorName      Certificate              Thumbprint                               Resolution
+    # ---------      -----------              ----------                               ----------
+    # CERT_E_EXPIRED CN=old.contoso.com       DEAD1234BEEF5678DEAD1234BEEF5678DEAD1234 1. Renew certificate...
+    # CERT_E_EXPIRED CN=Contoso Legacy CA     CAFE9876BABE5432CAFE9876BABE5432CAFE9876 1. Renew certificate...
+    
+    Write-Host "FOUND: $($ExpiredAnalysis.Count) expired certificate(s)" -ForegroundColor Red
+} else {
+    Write-Host "No expired certificates found" -ForegroundColor Green
+}
+
+# Step 3: Check for trust issues
+Write-Host "`n=== Step 3: Checking Trust Chain ===" -ForegroundColor Yellow
+$Untrusted = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Untrusted -Hours 24
+if ($Untrusted) {
+    $TrustAnalysis = Get-CapiErrorAnalysis -Events $Untrusted[0].Events
+    
+    # Group by error type
+    $TrustAnalysis | Group-Object ErrorName | Format-Table Count, Name -AutoSize
+    
+    # Output:
+    # Count Name
+    # ----- ----
+    #     2 CERT_E_UNTRUSTEDROOT
+    #     1 CERT_E_CHAINING
+    
+    Write-Host "FOUND: Trust chain issues detected" -ForegroundColor Red
+} else {
+    Write-Host "Trust chain is valid" -ForegroundColor Green
+}
+
+# Step 4: Check revocation status
+Write-Host "`n=== Step 4: Checking Revocation Status ===" -ForegroundColor Yellow
+$Revocation = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Revocation -Hours 24
+if ($Revocation) {
+    $RevAnalysis = Get-CapiErrorAnalysis -Events $Revocation[0].Events
+    
+    # Extract CRL/OCSP URLs from events
+    $RevAnalysis | ForEach-Object {
+        Write-Host "Certificate: $($_.Certificate)" -ForegroundColor White
+        Write-Host "Error: $($_.ErrorName)" -ForegroundColor Red
+        Write-Host "Thumbprint: $($_.Thumbprint)" -ForegroundColor Gray
+        Write-Host ""
+    }
+    
+    # Output:
+    # Certificate: CN=app.contoso.com
+    # Error: CRYPT_E_REVOCATION_OFFLINE
+    # Thumbprint: ABC123DEF456ABC123DEF456ABC123DEF456ABC1
+    
+    Write-Host "FOUND: $($RevAnalysis.Count) revocation check failure(s)" -ForegroundColor Red
+} else {
+    Write-Host "Revocation checks successful" -ForegroundColor Green
+}
+
+# Step 5: Detailed chain analysis
+Write-Host "`n=== Step 5: Detailed Chain Analysis ===" -ForegroundColor Yellow
+$ChainIssues = Find-CapiEventsByName -Name "*.contoso.com" -FilterType ChainBuilding -Hours 24
+if ($ChainIssues) {
+    $ChainAnalysis = Get-CapiErrorAnalysis -Events $ChainIssues[0].Events
+    
+    # Show which certificates are missing
+    $ChainAnalysis | Where-Object { $_.ErrorName -eq 'CERT_E_CHAINING' } | ForEach-Object {
+        Write-Host "Missing intermediate for: $($_.Certificate)" -ForegroundColor Red
+        Write-Host "Thumbprint: $($_.Thumbprint)" -ForegroundColor Gray
+        Write-Host "Resolution: $($_.Resolution[0])" -ForegroundColor Yellow
+        Write-Host ""
+    }
+}
+
+# Step 6: Generate comprehensive report
+Write-Host "`n=== Step 6: Generating Report ===" -ForegroundColor Cyan
+Export-CapiEvents -Events $AllErrors[0].Events `
+                  -Path "C:\Reports" `
+                  -Format HTML `
+                  -IncludeErrorAnalysis `
+                  -TaskID $AllErrors[0].TaskID
+
+Write-Host "Report saved to: C:\Reports\CapiEvents_$($AllErrors[0].TaskID.Substring(0,8)).html" -ForegroundColor Green
+
+# Step 7: Summary and recommendations
+Write-Host "`n=== Troubleshooting Summary ===" -ForegroundColor Cyan
+Write-Host "Total Issues Found: $($Summary.TotalErrors)" -ForegroundColor White
+Write-Host "Critical: $($Summary.Critical) | Warning: $($Summary.Warning)" -ForegroundColor White
+Write-Host "`nRecommended Actions:" -ForegroundColor Yellow
+Write-Host "1. Renew expired certificates immediately" -ForegroundColor White
+Write-Host "2. Install missing intermediate certificates" -ForegroundColor White
+Write-Host "3. Deploy root CA certificates via Group Policy" -ForegroundColor White
+Write-Host "4. Verify network access to CRL/OCSP endpoints" -ForegroundColor White
+```
+
+### Example 10: Automated Certificate Monitoring with Alerts
+
+Scheduled task for proactive certificate monitoring using FilterType:
+
+```powershell
+# Certificate Health Monitoring Script
+# Schedule this to run hourly via Task Scheduler
+
+$MonitoringConfig = @{
+    Domains = @("*.contoso.com", "*.api.contoso.com", "*.internal.local")
+    Hours = 2
+    AlertEmail = "it-security@contoso.com"
+    ReportPath = "C:\CertMonitoring\Reports"
+}
+
+# Initialize alert tracking
+$Alerts = @()
+
+# Check 1: Expired certificates (CRITICAL)
+Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Checking for expired certificates..." -ForegroundColor Cyan
+foreach ($Domain in $MonitoringConfig.Domains) {
+    $Expired = Find-CapiEventsByName -Name $Domain -FilterType Expired -Hours $MonitoringConfig.Hours
+    
+    if ($Expired) {
+        $Analysis = Get-CapiErrorAnalysis -Events $Expired[0].Events
+        foreach ($Error in $Analysis) {
+            $Alerts += [PSCustomObject]@{
+                Timestamp = Get-Date
+                Severity = "CRITICAL"
+                Type = "Expired Certificate"
+                Domain = $Domain
+                Certificate = $Error.Certificate
+                Thumbprint = $Error.Thumbprint
+                ErrorCode = $Error.ErrorCode
+                Message = "Certificate has expired"
+            }
+            Write-Host "  [CRITICAL] Expired: $($Error.Certificate)" -ForegroundColor Red
+        }
+    }
+}
+
+# Check 2: Untrusted certificates (CRITICAL)
+Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Checking for trust chain issues..." -ForegroundColor Cyan
+foreach ($Domain in $MonitoringConfig.Domains) {
+    $Untrusted = Find-CapiEventsByName -Name $Domain -FilterType Untrusted -Hours $MonitoringConfig.Hours
+    
+    if ($Untrusted) {
+        $Analysis = Get-CapiErrorAnalysis -Events $Untrusted[0].Events
+        foreach ($Error in $Analysis) {
+            $Alerts += [PSCustomObject]@{
+                Timestamp = Get-Date
+                Severity = "CRITICAL"
+                Type = "Untrusted Certificate"
+                Domain = $Domain
+                Certificate = $Error.Certificate
+                Thumbprint = $Error.Thumbprint
+                ErrorCode = $Error.ErrorCode
+                Message = $Error.Description
+            }
+            Write-Host "  [CRITICAL] Untrusted: $($Error.Certificate)" -ForegroundColor Red
+        }
+    }
+}
+
+# Check 3: Revocation check failures (WARNING)
+Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Checking revocation status..." -ForegroundColor Cyan
+foreach ($Domain in $MonitoringConfig.Domains) {
+    $Revocation = Find-CapiEventsByName -Name $Domain -FilterType Revocation -Hours $MonitoringConfig.Hours
+    
+    if ($Revocation) {
+        $Analysis = Get-CapiErrorAnalysis -Events $Revocation[0].Events
+        foreach ($Error in $Analysis) {
+            $Alerts += [PSCustomObject]@{
+                Timestamp = Get-Date
+                Severity = "WARNING"
+                Type = "Revocation Check Failed"
+                Domain = $Domain
+                Certificate = $Error.Certificate
+                Thumbprint = $Error.Thumbprint
+                ErrorCode = $Error.ErrorCode
+                Message = "CRL/OCSP server unreachable"
+            }
+            Write-Host "  [WARNING] Revocation failed: $($Error.Certificate)" -ForegroundColor Yellow
+        }
+    }
+}
+
+# Check 4: Chain building issues (CRITICAL)
+Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Checking certificate chains..." -ForegroundColor Cyan
+foreach ($Domain in $MonitoringConfig.Domains) {
+    $ChainIssues = Find-CapiEventsByName -Name $Domain -FilterType ChainBuilding -Hours $MonitoringConfig.Hours
+    
+    if ($ChainIssues) {
+        $Analysis = Get-CapiErrorAnalysis -Events $ChainIssues[0].Events
+        foreach ($Error in $Analysis) {
+            $Alerts += [PSCustomObject]@{
+                Timestamp = Get-Date
+                Severity = "CRITICAL"
+                Type = "Chain Building Failed"
+                Domain = $Domain
+                Certificate = $Error.Certificate
+                Thumbprint = $Error.Thumbprint
+                ErrorCode = $Error.ErrorCode
+                Message = "Missing intermediate certificates"
+            }
+            Write-Host "  [CRITICAL] Chain failure: $($Error.Certificate)" -ForegroundColor Red
+        }
+    }
+}
+
+# Generate summary report
+Write-Host "`n=== Monitoring Summary ===" -ForegroundColor Cyan
+$CriticalCount = ($Alerts | Where-Object { $_.Severity -eq "CRITICAL" }).Count
+$WarningCount = ($Alerts | Where-Object { $_.Severity -eq "WARNING" }).Count
+
+Write-Host "Total Alerts: $($Alerts.Count)" -ForegroundColor White
+Write-Host "Critical: $CriticalCount | Warnings: $WarningCount" -ForegroundColor White
+
+if ($Alerts.Count -gt 0) {
+    # Display alerts
+    $Alerts | Format-Table Timestamp, Severity, Type, Certificate, Thumbprint -AutoSize
+    
+    # Example output:
+    # Timestamp           Severity Type                    Certificate              Thumbprint
+    # ---------           -------- ----                    -----------              ----------
+    # 12/10/2025 14:30:15 CRITICAL Expired Certificate     CN=old.contoso.com       DEAD1234BEEF5678...
+    # 12/10/2025 14:30:16 CRITICAL Untrusted Certificate   CN=Internal Root CA      FEDCBA0987654321...
+    # 12/10/2025 14:30:18 WARNING  Revocation Check Failed CN=api.contoso.com       A1B2C3D4E5F6071829...
+    # 12/10/2025 14:30:20 CRITICAL Chain Building Failed   CN=secure.contoso.com    1234567890ABCDEF...
+    
+    # Export detailed report
+    $ReportFile = Join-Path $MonitoringConfig.ReportPath "CertAlert_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $Alerts | ConvertTo-Html -Title "Certificate Alert Report" | Out-File $ReportFile
+    
+    # Send email alert (if critical issues found)
+    if ($CriticalCount -gt 0) {
+        $EmailBody = @"
+Certificate Monitoring Alert - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+
+CRITICAL ISSUES DETECTED: $CriticalCount
+Warnings: $WarningCount
+
+Summary:
+$($Alerts | Where-Object { $_.Severity -eq "CRITICAL" } | Format-Table Type, Certificate, Message | Out-String)
+
+Full report: $ReportFile
+
+Action Required:
+1. Review expired certificates and renew immediately
+2. Verify certificate trust chains
+3. Install missing intermediate certificates
+4. Check CRL/OCSP endpoint accessibility
+
+This is an automated alert from CAPI2Tools Certificate Monitoring.
+"@
+        
+        # Uncomment to send email:
+        # Send-MailMessage -To $MonitoringConfig.AlertEmail `
+        #                  -From "certmonitor@contoso.com" `
+        #                  -Subject "[CRITICAL] Certificate Issues Detected - $CriticalCount Critical" `
+        #                  -Body $EmailBody `
+        #                  -SmtpServer "smtp.contoso.com"
+        
+        Write-Host "`n[ALERT] Email notification would be sent to $($MonitoringConfig.AlertEmail)" -ForegroundColor Red
+    }
+    
+    Write-Host "`nReport saved: $ReportFile" -ForegroundColor Green
+} else {
+    Write-Host "`n[OK] No certificate issues detected" -ForegroundColor Green
+}
+
+# Log to Windows Event Log
+$EventSource = "CAPI2Tools-Monitor"
+if (-not [System.Diagnostics.EventLog]::SourceExists($EventSource)) {
+    New-EventLog -LogName Application -Source $EventSource
+}
+
+$EventType = if ($CriticalCount -gt 0) { "Error" } elseif ($WarningCount -gt 0) { "Warning" } else { "Information" }
+$EventMessage = "Certificate monitoring complete. Critical: $CriticalCount, Warnings: $WarningCount"
+Write-EventLog -LogName Application -Source $EventSource -EntryType $EventType -EventId 1001 -Message $EventMessage
+
+Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Monitoring cycle complete" -ForegroundColor Cyan
+```
+
+### Example 11: Process Multiple Certificate Chains
 
 ```powershell
 # Find all microsoft.com certificate validations in last 5 hours
