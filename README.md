@@ -645,6 +645,36 @@ Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 ```
 
+### Example 3: Pipeline Processing with Filtering (Advanced)
+
+Export multiple correlation chains that match specific error criteria:
+
+```powershell
+# Find all revocation errors and export each chain to a separate report
+Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation | 
+    ForEach-Object { 
+        Export-CapiEvents -Events $_.Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $_.TaskID 
+    }
+
+# Find all expired certificate errors and export to JSON for automation
+Find-CapiEventsByName -Name "*.company.com" -FilterType Expired | 
+    ForEach-Object { 
+        Export-CapiEvents -Events $_.Events -Path "C:\Reports" -Format JSON -IncludeErrorAnalysis -TaskID $_.TaskID 
+    }
+
+# Export only chains with policy validation errors to CSV for bulk analysis
+Find-CapiEventsByName -Name "*" -Hours 48 -FilterType PolicyValidation | 
+    ForEach-Object { 
+        Export-CapiEvents -Events $_.Events -Path "C:\Reports" -Format CSV -TaskID $_.TaskID 
+    }
+```
+
+**When to use this approach:**
+- 📊 Batch processing multiple certificate validation chains
+- 🔍 Filtering by specific error types (Revocation, Expired, Untrusted, etc.)
+- 🤖 Automation scenarios where you need to process each chain individually
+- 📈 Generating separate reports for each correlation chain found
+
 ### Example 4: Track Fix Progress (Advanced)
 
 ```powershell
