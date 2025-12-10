@@ -114,9 +114,19 @@ function Get-CAPI2ErrorDetails {
     )
     
     # Normalize error code format
-    if ($ErrorCode -match '^[0-9]+$') {
+    # Remove any whitespace
+    $ErrorCode = $ErrorCode.Trim()
+    
+    # If it's a hex string without 0x prefix, add it
+    if ($ErrorCode -match '^[0-9A-Fa-f]{8}$') {
+        $ErrorCode = "0x$ErrorCode"
+    }
+    # If it's a decimal number, convert to hex
+    elseif ($ErrorCode -match '^[0-9]+$') {
         $ErrorCode = "0x{0:X8}" -f [int64]$ErrorCode
     }
+    # Ensure 0x prefix is lowercase for consistency
+    $ErrorCode = $ErrorCode -replace '^0X', '0x'
     
     if ($Script:CAPI2ErrorCodes.ContainsKey($ErrorCode)) {
         return $Script:CAPI2ErrorCodes[$ErrorCode]
@@ -929,11 +939,12 @@ function Get-CapiErrorAnalysis {
         foreach ($CurrentEvent in $Events) {
             # Parse XML to find error codes
             try {
-                [xml]$EventXml = "<root>$($CurrentEvent.DetailedMessage)</root>"
+                [xml]$EventXml = $CurrentEvent.DetailedMessage
                 
                 # Check for Result elements with error values
                 # Only select Result and Error nodes, not other value attributes like Flags
-                $ResultNodes = $EventXml.SelectNodes("//Result[@value] | //Error[@value]")
+                # Use local-name() to handle XML namespaces
+                $ResultNodes = $EventXml.SelectNodes("//*[local-name()='Result' and @value] | //*[local-name()='Error' and @value]")
                 
                 foreach ($Node in $ResultNodes) {
                     $ErrorValue = $Node.value
