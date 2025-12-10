@@ -1088,6 +1088,9 @@ function Get-CapiTaskIDEvents {
         # 1. chainRef - Links certificate chain events (IDs 11, 30, 81)
         # 2. CorrelationAuxInfo TaskId - Links full workflow events (IDs 10, 11, 30, 40, 41, 50, 51, 80, 81, 90)
         
+        # Normalize TaskID format - remove braces if present, we'll add them in queries
+        $TaskID = $TaskID.Trim('{}')
+        
         # First, try to find events by chainRef (most common scenario)
         $QueryChainRef = "*[UserData/CertVerifyCertificateChainPolicy/CertificateChain[@chainRef='{$TaskID}']] or 
         *[UserData/CertGetCertificateChain/CertificateChain[@chainRef='{$TaskID}']] or
@@ -1130,15 +1133,20 @@ function Get-CapiTaskIDEvents {
         
         # If chainRef didn't work, try searching directly by CorrelationAuxInfo TaskId (legacy format or direct TaskId search)
         $QueryTaskId = "*[UserData/*/CorrelationAuxInfo[@TaskId='{$TaskID}']]"
-        $Events = Get-WinEvent -FilterXPath $QueryTaskId -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+        $RawEvents = Get-WinEvent -FilterXPath $QueryTaskId -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue
         
-        if ($null -ne $Events) {
-            return $Events
+        if ($RawEvents) {
+            Write-Verbose "Found $($RawEvents.Count) raw events, converting..."
+            $Events = $RawEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+            
+            if ($Events -and $Events.Count -gt 0) {
+                Write-Verbose "Returning $($Events.Count) converted events"
+                return $Events
+            }
         }
-        else {
-            Write-Host "No Capi2 Event were found with the CorrelationID $TaskID" -ForegroundColor Yellow
-            exit
-        }
+        
+        Write-Host "No Capi2 Event were found with the CorrelationID $TaskID" -ForegroundColor Yellow
+        return $null
     }
     catch {
         Write-Warning -Message $_.Exception.Message
@@ -1295,11 +1303,48 @@ function Get-X509CertificateInfo {
     try {
         [xml]$EventXml = $Event90.DetailedMessage
         
-        # Get the first Certificate node (usually the end-entity/leaf certificate)
-        $CertNode = $EventXml.GetElementsByTagName("Certificate") | Select-Object -First 1
+        # Get all Certificate nodes
+        $AllCertNodes = $EventXml.GetElementsByTagName("Certificate")
         
-        if (-not $CertNode) {
+        if (-not $AllCertNodes -or $AllCertNodes.Count -eq 0) {
             return $null
+        }
+        
+        # Prioritize end-entity certificate (the one with SubjectAltName extensions, not a CA)
+        $CertNode = $null
+        foreach ($cert in $AllCertNodes) {
+            # Check if this certificate has SubjectAltName (indicates end-entity cert)
+            # Use GetElementsByTagName to handle XML namespaces
+            $Extensions = $cert.GetElementsByTagName("Extensions")
+            if ($Extensions -and $Extensions.Count -gt 0) {
+                $SubjectAltNames = $Extensions[0].GetElementsByTagName("SubjectAltName")
+                if ($SubjectAltNames -and $SubjectAltNames.Count -gt 0) {
+                    $CertNode = $cert
+                    break
+                }
+            }
+        }
+        
+        # If no cert with SANs found, check for non-CA certificate (cA='false')
+        if (-not $CertNode) {
+            foreach ($cert in $AllCertNodes) {
+                $Extensions = $cert.GetElementsByTagName("Extensions")
+                if ($Extensions -and $Extensions.Count -gt 0) {
+                    $BasicConstraints = $Extensions[0].GetElementsByTagName("BasicConstraints")
+                    if ($BasicConstraints -and $BasicConstraints.Count -gt 0) {
+                        $cAValue = $BasicConstraints[0].GetAttribute("cA")
+                        if ($cAValue -eq "false") {
+                            $CertNode = $cert
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        # Fallback to first certificate
+        if (-not $CertNode) {
+            $CertNode = $AllCertNodes | Select-Object -First 1
         }
         
         # Extract Subject CN
@@ -1324,24 +1369,29 @@ function Get-X509CertificateInfo {
         
         # Extract Subject Alternative Names (SANs)
         $SANs = @()
-        $SANNode = $CertNode.SelectSingleNode("Extensions/SubjectAltName")
-        if ($SANNode) {
-            # DNS Names
-            $DNSNodes = $SANNode.SelectNodes("DNSName")
-            foreach ($DNS in $DNSNodes) {
-                $SANs += "DNS: $($DNS.InnerText)"
-            }
-            
-            # UPNs (User Principal Names)
-            $UPNNodes = $SANNode.SelectNodes("UPN")
-            foreach ($UPN in $UPNNodes) {
-                $SANs += "UPN: $($UPN.InnerText)"
-            }
-            
-            # Email addresses
-            $EmailNodes = $SANNode.SelectNodes("RFC822Name")
-            foreach ($Email in $EmailNodes) {
-                $SANs += "Email: $($Email.InnerText)"
+        $Extensions = $CertNode.GetElementsByTagName("Extensions")
+        if ($Extensions -and $Extensions.Count -gt 0) {
+            $SubjectAltNames = $Extensions[0].GetElementsByTagName("SubjectAltName")
+            if ($SubjectAltNames -and $SubjectAltNames.Count -gt 0) {
+                $SANNode = $SubjectAltNames[0]
+                
+                # DNS Names
+                $DNSNodes = $SANNode.GetElementsByTagName("DNSName")
+                foreach ($DNS in $DNSNodes) {
+                    $SANs += "DNS: $($DNS.InnerText)"
+                }
+                
+                # UPNs (User Principal Names)
+                $UPNNodes = $SANNode.GetElementsByTagName("UPN")
+                foreach ($UPN in $UPNNodes) {
+                    $SANs += "UPN: $($UPN.InnerText)"
+                }
+                
+                # Email addresses
+                $EmailNodes = $SANNode.GetElementsByTagName("RFC822Name")
+                foreach ($Email in $EmailNodes) {
+                    $SANs += "Email: $($Email.InnerText)"
+                }
             }
         }
         
