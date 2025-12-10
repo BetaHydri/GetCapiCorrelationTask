@@ -1259,6 +1259,50 @@ function Format-XML ([xml]$Xml, $Indent = 3) {
     Write-Output $StringWriter.ToString() 
 }
 
+function Get-EventChainSummary {
+    <#
+    .SYNOPSIS
+        Creates a summary of all events in a CAPI2 correlation chain.
+    .PARAMETER Events
+        Array of CAPI2 events from the same correlation chain
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Events
+    )
+    
+    $ChainSummary = @()
+    
+    foreach ($Event in $Events) {
+        # Extract sequence number from AuxInfo
+        $SequenceNum = $null
+        try {
+            [xml]$EventXml = $Event.DetailedMessage
+            $AuxInfoNode = $EventXml.SelectSingleNode("//EventAuxInfo[@SequenceNumber]")
+            if ($AuxInfoNode) {
+                $SequenceNum = [int]$AuxInfoNode.SequenceNumber
+            }
+        }
+        catch {
+            Write-Verbose "Could not parse sequence number for event ID $($Event.Id)"
+        }
+        
+        $ChainSummary += [PSCustomObject]@{
+            Sequence     = $SequenceNum
+            TimeCreated  = $Event.TimeCreated
+            Level        = $Event.LevelDisplayName
+            EventID      = $Event.Id
+            TaskCategory = $Event.TaskDisplayName
+        }
+    }
+    
+    # Sort by sequence number if available, otherwise by time
+    $ChainSummary = $ChainSummary | Sort-Object -Property @{Expression={if ($_.Sequence) {$_.Sequence} else {999999}}}, TimeCreated
+    
+    return $ChainSummary
+}
+
 #region Analysis and Export Functions
 
 function Get-CapiErrorAnalysis {
@@ -1276,6 +1320,10 @@ function Get-CapiErrorAnalysis {
     .PARAMETER IncludeSummary
         Shows a summary count of error types
         
+    .PARAMETER ShowEventChain
+        Displays all events in the CAPI2 correlation chain with their Task Categories (Build Chain, X509 Objects, Verify Chain Policy, etc.)
+        Shows the complete event sequence including Event IDs and levels (Information, Error, Warning)
+        
     .EXAMPLE
         $Events = Get-CapiTaskIDEvents -TaskID "12345..."
         Get-CapiErrorAnalysis -Events $Events
@@ -1283,6 +1331,11 @@ function Get-CapiErrorAnalysis {
     .EXAMPLE
         $Results = Find-CapiEventsByName -Name "contoso.com"
         Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+        
+    .EXAMPLE
+        $Results = Find-CapiEventsByName -Name "expired.badssl.com"
+        Get-CapiErrorAnalysis -Events $Results[0].Events -ShowEventChain
+        Shows all CAPI2 events in the chain with their categories (Build Chain, X509 Objects, etc.)
     #>
     [CmdletBinding()]
     param(
@@ -1290,7 +1343,10 @@ function Get-CapiErrorAnalysis {
         [array]$Events,
         
         [Parameter(Mandatory = $false)]
-        [switch]$IncludeSummary
+        [switch]$IncludeSummary,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowEventChain
     )
     
     begin {
@@ -1388,9 +1444,24 @@ function Get-CapiErrorAnalysis {
     }
     
     end {
+        # Display event chain if requested
+        if ($ShowEventChain -and $Events.Count -gt 0) {
+            Write-Host "`n=== CAPI2 Correlation Chain Events ===" -ForegroundColor Cyan
+            Write-Host "Total events in chain: $($Events.Count)" -ForegroundColor Gray
+            Write-Host "Events are sorted by AuxInfo sequence number`n" -ForegroundColor Gray
+            
+            $ChainSummary = Get-EventChainSummary -Events $Events
+            $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory -AutoSize
+        }
+        
         if ($ErrorTable.Count -eq 0) {
-            Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
-            Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
+            if ($ShowEventChain) {
+                Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
+                Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
+            } else {
+                Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
+                Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
+            }
             return
         }
         
@@ -1812,6 +1883,52 @@ Get-CAPI2EventLogStatus</pre>
 "@
                         }
                     }
+                    
+                    # Add CAPI2 Correlation Chain Events table
+                    $HtmlReport += "<h2>📋 CAPI2 Correlation Chain Events</h2>"
+                    $HtmlReport += "<div class='info'>"
+                    $HtmlReport += "<p><strong>Total events in correlation chain:</strong> $($Events.Count)</p>"
+                    $HtmlReport += "<p>This section shows all CAPI2 events sorted by AuxInfo sequence number, displaying the exact order of the certificate validation process.</p>"
+                    $HtmlReport += "</div>"
+                    
+                    $ChainSummary = Get-EventChainSummary -Events $Events
+                    $HtmlReport += @"
+<table>
+    <thead>
+        <tr>
+            <th>Seq</th>
+            <th>Time</th>
+            <th>Level</th>
+            <th>Event ID</th>
+            <th>Task Category</th>
+        </tr>
+    </thead>
+    <tbody>
+"@
+                    foreach ($ChainEvent in $ChainSummary) {
+                        $LevelClass = switch ($ChainEvent.Level) {
+                            'Error' { 'error' }
+                            'Warning' { 'warning' }
+                            'Information' { '' }
+                            default { '' }
+                        }
+                        
+                        $SeqDisplay = if ($ChainEvent.Sequence) { $ChainEvent.Sequence } else { "-" }
+                        
+                        $HtmlReport += @"
+        <tr>
+            <td style='text-align: center; font-weight: bold; color: #666;'>$SeqDisplay</td>
+            <td class='timestamp'>$($ChainEvent.TimeCreated)</td>
+            <td class='$LevelClass'>$($ChainEvent.Level)</td>
+            <td>$($ChainEvent.EventID)</td>
+            <td>$($ChainEvent.TaskCategory)</td>
+        </tr>
+"@
+                    }
+                    $HtmlReport += @"
+    </tbody>
+</table>
+"@
                     
                     $HtmlReport += "<h2>Event Details</h2>"
                     $HtmlReport += $ExportData | ConvertTo-Html -Fragment -Property TimeCreated, ID, RecordType, EventName, Certificate

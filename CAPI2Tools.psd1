@@ -3,7 +3,7 @@
     RootModule           = 'CAPI2Tools.psm1'
     
     # Version number of this module.
-    ModuleVersion        = '2.10.1'
+    ModuleVersion        = '2.11.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')

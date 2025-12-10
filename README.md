@@ -522,8 +522,37 @@ Analyzes CAPI2 events and presents errors in a comprehensive table format with d
 **Parameters**:
 - `Events` (Required): Array of CAPI2 events
 - `IncludeSummary`: Shows error count summary
+- `ShowEventChain`: Display full CAPI2 correlation chain with Task Categories (Build Chain, X509 Objects, Verify Chain Policy, etc.)
 
 **Returns**: Error analysis table with severity, descriptions, and resolution steps
+
+**Example**:
+```powershell
+# Show errors with full event chain
+Get-CapiErrorAnalysis -Events $Events -ShowEventChain
+
+# Output includes:
+# - CAPI2 Correlation Chain Events table (Sequence, Time, Level, Event ID, Task Category)
+#   Events are sorted by AuxInfo sequence number for exact chronological order
+# - Error Analysis with detailed descriptions
+# - Trust Chain validation details
+```
+
+**Event Chain Output Example**:
+```
+=== CAPI2 Correlation Chain Events ===
+Total events in chain: 9
+Events are sorted by AuxInfo sequence number
+
+Sequence TimeCreated          Level       EventID TaskCategory
+-------- -----------          -----       ------- ------------
+1        10/12/2025 21:05:07  Information 11      Build Chain
+2        10/12/2025 21:05:07  Information 90      X509 Objects
+3        10/12/2025 21:05:07  Information 10      Build Chain
+4        10/12/2025 21:05:07  Information 30      Verify Chain Policy
+5        10/12/2025 21:05:07  Error       30      Verify Chain Policy
+...
+```
 
 ---
 
