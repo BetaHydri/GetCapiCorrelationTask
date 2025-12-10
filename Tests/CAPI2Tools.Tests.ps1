@@ -415,8 +415,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should not throw when no events are found" {
             # This simulates the scenario where certificate name doesn't exist in logs
-            # Use MaxEvents to speed up the test
-            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            # Use Hours 0.01 (36 seconds) to speed up the test
+            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should create export directory if it doesn't exist (v2.9 feature)" {
@@ -431,7 +431,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             Test-Path $TempDir | Should -Be $false
             
             # Call with ExportPath - should create directory even if no events found
-            Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue
+            Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -Hours 0.01 -ErrorAction SilentlyContinue
             
             # Directory should now exist (created by the function)
             Test-Path $TempDir | Should -Be $true
@@ -509,11 +509,11 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
         
         It "Should accept Hours parameter" {
-            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 1 -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should accept ShowDetails switch" {
-            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should accept all parameters together" {
