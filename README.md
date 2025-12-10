@@ -71,7 +71,7 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 - 🎯 **Smart File Naming**: Auto-generated filenames based on certificate name and TaskID (e.g., `microsoft.com_621E9428.html`)
 - 📂 **Directory-Based Export**: Specify output directory instead of full file path
 - ✅ **Format Validation**: New `-Format` parameter with ValidateSet (HTML, JSON, CSV, XML)
-- 🔧 **Simplified Workflow**: `Get-CapiCertificateReport -Name "*.microsoft.com" -ExportPath "C:\Reports" -Format HTML`
+- 🔧 **Simplified Workflow**: `Get-CapiCertificateReport -Name "*.microsoft.com" -ExportPath "C:\Reports"`
 
 ### What's New in v2.8
 
@@ -248,17 +248,32 @@ The **easiest way** to diagnose certificate issues - one command does it all:
 # Just search and view results
 Get-CapiCertificateReport -Name "problematic-site.com"
 
-# Search and export to HTML in one command (auto-generates filename)
+# Search and export to HTML (default - best for human reading)
 Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "C:\Reports"
 
-# Search, export, and open report automatically
+# Search, export, and open report automatically in browser
 Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "C:\Reports" -OpenReport
+
+# Export to JSON for automation/integration with monitoring tools
+Get-CapiCertificateReport -Name "api.company.com" -ExportPath "C:\Reports" -Format JSON
+
+# Export to CSV for Excel analysis or bulk processing
+Get-CapiCertificateReport -Name "*.internal.net" -ExportPath "C:\Reports" -Format CSV
+
+# Export to XML for PowerShell pipeline processing
+Get-CapiCertificateReport -Name "services.*" -ExportPath "C:\Reports" -Format XML
 ```
+
+**Choose the right format for your needs:**
+- 📄 **HTML** (default) - Beautiful reports for manual review, includes color coding and detailed error analysis
+- 🔧 **JSON** - Machine-readable format for automation, monitoring systems (Splunk, ELK), or API integration
+- 📊 **CSV** - Open in Excel for sorting, filtering, pivot tables, or importing into databases
+- 📦 **XML** - Native PowerShell format, perfect for pipeline processing with `Import-Clixml` and automation scripts
 
 **That's it!** This single command:
 - ✅ Searches for certificate events
 - ✅ Analyzes all errors automatically
-- ✅ Exports to HTML/JSON/CSV/XML
+- ✅ Exports to your chosen format
 - ✅ Shows clear, actionable results
 
 ### Advanced Workflow (For Power Users)
@@ -788,7 +803,7 @@ $MultiPattern = Find-CapiEventsByName -Name "site.com" -IncludePattern "*CRL*|*A
 # ⭐ Simplified approach - exports each chain to separate file
 $Sites = @("site1.com", "site2.com", "site3.com")
 foreach ($Site in $Sites) {
-    Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports" -Format HTML -Hours 168
+    Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports" -Hours 168
 }
 
 # Advanced approach with more control - single file per site
