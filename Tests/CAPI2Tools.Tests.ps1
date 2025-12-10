@@ -502,8 +502,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             # Should throw because 'TXT' is not in ValidateSet (parameter binding error)
-            # Use Invoke-Expression to ensure parameter binding occurs in the scriptblock
-            { Invoke-Expression 'Get-CapiCertificateReport -Name "test.com" -ExportPath "$TempDir" -Format "TXT" -Hours 1' } | Should Throw
+            # Must use scriptblock without Invoke-Expression for ValidateSet to trigger
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -Hours 1 } | Should Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -563,8 +563,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should reject invalid Format values" {
             # This should throw a parameter validation error because 'PDF' is not in ValidateSet (parameter binding error)
-            # Use Invoke-Expression to ensure parameter binding occurs in the scriptblock
-            { Invoke-Expression 'Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" -Hours 1' } | Should Throw
+            # Must use scriptblock without Invoke-Expression for ValidateSet to trigger
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" -Hours 1 } | Should Throw
         }
     }
 }
