@@ -894,7 +894,8 @@ function Get-CapiErrorAnalysis {
                 [xml]$EventXml = "<root>$($CurrentEvent.DetailedMessage)</root>"
                 
                 # Check for Result elements with error values
-                $ResultNodes = $EventXml.SelectNodes("//*[@value]")
+                # Only select Result and Error nodes, not other value attributes like Flags
+                $ResultNodes = $EventXml.SelectNodes("//Result[@value] | //Error[@value]")
                 
                 foreach ($Node in $ResultNodes) {
                     $ErrorValue = $Node.value
@@ -1386,33 +1387,32 @@ function Get-CapiCertificateReport {
         To just:
           Get-CapiCertificateReport -Name "site.com" -ExportPath "report.html"
     #>
-    [CmdletBinding(DefaultParameterSetName = 'ConsoleOnly')]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ConsoleOnly')]
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'Export')]
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ExportAndOpen')]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$Name,
         
-        [Parameter(Mandatory = $true, ParameterSetName = 'Export')]
-        [Parameter(Mandatory = $true, ParameterSetName = 'ExportAndOpen')]
+        [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
         [ValidatePattern('\.(html|json|csv|xml)$')]
         [string]$ExportPath,
         
-        [Parameter(Mandatory = $false, ParameterSetName = 'ConsoleOnly')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'Export')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
+        [Parameter(Mandatory = $false)]
         [ValidateRange(1, 8760)]
         [int]$Hours = 24,
         
-        [Parameter(Mandatory = $false, ParameterSetName = 'ConsoleOnly')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'Export')]
-        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
+        [Parameter(Mandatory = $false)]
         [switch]$ShowDetails,
         
-        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
+        [Parameter(Mandatory = $false)]
         [switch]$OpenReport
     )
+    
+    # Validate that OpenReport requires ExportPath
+    if ($OpenReport -and -not $ExportPath) {
+        Write-Error "-OpenReport switch requires -ExportPath to be specified"
+        return
+    }
     
     Write-Host "`n$(Get-DisplayChar 'RightArrow') Searching for certificate events: $Name" -ForegroundColor Cyan
     Write-Host "   Time range: Last $Hours hours`n" -ForegroundColor Gray
