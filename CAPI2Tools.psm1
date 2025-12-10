@@ -1485,8 +1485,8 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
     </thead>
     <tbody>
 "@
-                            foreach ($Error in $ErrorAnalysis) {
-                                $SeverityClass = switch ($Error.Severity) {
+                            foreach ($ErrorEntry in $ErrorAnalysis) {
+                                $SeverityClass = switch ($ErrorEntry.Severity) {
                                     'Critical' { 'error' }
                                     'Error' { 'error' }
                                     'Warning' { 'warning' }
@@ -1495,17 +1495,17 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                                 
                                 # Build TrustStatus HTML
                                 $TrustHtml = ""
-                                if ($Error.TrustStatus) {
-                                    if ($Error.TrustStatus.ErrorFlags.Count -gt 0) {
+                                if ($ErrorEntry.TrustStatus) {
+                                    if ($ErrorEntry.TrustStatus.ErrorFlags.Count -gt 0) {
                                         $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #d13438;'>Trust Errors:</strong><ul style='margin: 5px 0; padding-left: 20px;'>"
-                                        foreach ($Flag in $Error.TrustStatus.ErrorFlags) {
+                                        foreach ($Flag in $ErrorEntry.TrustStatus.ErrorFlags) {
                                             $TrustHtml += "<li><strong>$($Flag.Flag)</strong><br><span style='color: #666; font-size: 0.9em;'>$($Flag.Description)</span></li>"
                                         }
                                         $TrustHtml += "</ul></div>"
                                     }
-                                    if ($Error.TrustStatus.InfoFlags.Count -gt 0) {
+                                    if ($ErrorEntry.TrustStatus.InfoFlags.Count -gt 0) {
                                         $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #0078d4;'>Trust Info:</strong><ul style='margin: 5px 0; padding-left: 20px; font-size: 0.9em;'>"
-                                        foreach ($Flag in $Error.TrustStatus.InfoFlags) {
+                                        foreach ($Flag in $ErrorEntry.TrustStatus.InfoFlags) {
                                             $TrustHtml += "<li style='color: #666;'>$($Flag.Flag)</li>"
                                         }
                                         $TrustHtml += "</ul></div>"
@@ -1517,11 +1517,11 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                                 
                                 $HtmlReport += @"
         <tr>
-            <td class='timestamp'>$($Error.TimeCreated)</td>
-            <td class='$SeverityClass'>$($Error.Severity)</td>
-            <td><strong>$($Error.ErrorName)</strong></td>
-            <td>$($Error.Certificate)</td>
-            <td>$($Error.Description)<br><br><strong>Resolution:</strong> $($Error.Resolution)</td>
+            <td class='timestamp'>$($ErrorEntry.TimeCreated)</td>
+            <td class='$SeverityClass'>$($ErrorEntry.Severity)</td>
+            <td><strong>$($ErrorEntry.ErrorName)</strong></td>
+            <td>$($ErrorEntry.Certificate)</td>
+            <td>$($ErrorEntry.Description)<br><br><strong>Resolution:</strong> $($ErrorEntry.Resolution)</td>
             <td>$TrustHtml</td>
         </tr>
 "@
