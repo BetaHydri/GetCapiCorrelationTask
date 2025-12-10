@@ -711,12 +711,54 @@ function Get-CapiTaskIDEvents {
         $TaskID
     )
     try {
-        # Modern CAPI2 events use chainRef attribute in CertificateChain elements for correlation
-        $Query = "*[UserData/CertVerifyCertificateChainPolicy/CertificateChain[@chainRef='{$TaskID}']] or 
+        # CAPI2 uses TWO correlation mechanisms:
+        # 1. chainRef - Links certificate chain events (IDs 11, 30, 81)
+        # 2. CorrelationAuxInfo TaskId - Links full workflow events (IDs 10, 11, 30, 40, 41, 50, 51, 80, 81, 90)
+        
+        # First, try to find events by chainRef (most common scenario)
+        $QueryChainRef = "*[UserData/CertVerifyCertificateChainPolicy/CertificateChain[@chainRef='{$TaskID}']] or 
         *[UserData/CertGetCertificateChain/CertificateChain[@chainRef='{$TaskID}']] or
+        *[UserData/WinVerifyTrust/CertificateChain[@chainRef='{$TaskID}']] or
         *[UserData/X509Objects/Certificate[@chainRef='{$TaskID}']]"
-  
-        $Events = Get-WinEvent -FilterXPath $Query -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated 
+        
+        $ChainRefEvents = Get-WinEvent -FilterXPath $QueryChainRef -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue
+        
+        # If found, get the CorrelationAuxInfo TaskId from one of these events to find ALL related events
+        if ($ChainRefEvents) {
+            $CorrelationTaskId = $null
+            foreach ($evt in $ChainRefEvents) {
+                try {
+                    [xml]$EventXml = $evt.ToXml()
+                    $TaskIdNode = $EventXml.SelectSingleNode("//CorrelationAuxInfo[@TaskId]")
+                    if ($null -ne $TaskIdNode) {
+                        $CorrelationTaskId = $TaskIdNode.TaskId.Trim('{}')
+                        break
+                    }
+                }
+                catch { }
+            }
+            
+            # If we found a CorrelationAuxInfo TaskId, query for all events in the workflow
+            if ($CorrelationTaskId) {
+                Write-Verbose "Found CorrelationAuxInfo TaskId: $CorrelationTaskId"
+                $QueryTaskId = "*[UserData/*/CorrelationAuxInfo[@TaskId='{$CorrelationTaskId}']]"
+                $AllEvents = Get-WinEvent -FilterXPath $QueryTaskId -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue
+                
+                if ($AllEvents) {
+                    $Events = $AllEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+                    return $Events
+                }
+            }
+            
+            # Fallback: return just the chainRef events if we couldn't find CorrelationAuxInfo
+            $Events = $ChainRefEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+            return $Events
+        }
+        
+        # If chainRef didn't work, try searching directly by CorrelationAuxInfo TaskId (legacy format or direct TaskId search)
+        $QueryTaskId = "*[UserData/*/CorrelationAuxInfo[@TaskId='{$TaskID}']]"
+        $Events = Get-WinEvent -FilterXPath $QueryTaskId -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+        
         if ($null -ne $Events) {
             return $Events
         }
