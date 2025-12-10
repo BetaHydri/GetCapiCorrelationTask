@@ -594,12 +594,13 @@ function Find-CapiEventsByName {
                     }
                 }
             } | ForEach-Object {
-                # Extract TaskID from the event
+                # Extract chainRef as TaskID from the event (modern CAPI2 correlation)
                 try {
                     [xml]$EventXml = $_.UserData
-                    $TaskIdNode = $EventXml.SelectSingleNode("//*[@TaskId]")
-                    if ($null -ne $TaskIdNode) {
-                        $TaskId = $TaskIdNode.TaskId
+                    # Look for chainRef attribute in CertificateChain or Certificate elements
+                    $ChainRefNode = $EventXml.SelectSingleNode("//*[@chainRef]")
+                    if ($null -ne $ChainRefNode) {
+                        $TaskId = $ChainRefNode.chainRef
                         if ($TaskId) {
                             # Remove curly braces if present
                             $TaskId = $TaskId.Trim('{}')
@@ -612,7 +613,7 @@ function Find-CapiEventsByName {
                     }
                 }
                 catch {
-                    Write-Verbose "Could not extract TaskID from event: $_"
+                    Write-Verbose "Could not extract chainRef from event: $_"
                 }
             } | Select-Object -Property TaskID, TimeCreated, Preview -Unique | Sort-Object -Property TimeCreated -Descending
             
@@ -710,15 +711,10 @@ function Get-CapiTaskIDEvents {
         $TaskID
     )
     try {
-        $Query = "*[UserData[CertVerifyCertificateChainPolicy[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or 
-        *[UserData[CertGetCertificateChain[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CertGetCertificateChainStart[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[X509Objects[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CertRejectedRevocationInfo[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CertVerifyRevocation[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CertVerifyRevocationStart[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CryptRetrieveObjectByUrlCache[CorrelationAuxInfo[@TaskId='{$TaskID}']]]] or
-        *[UserData[CryptRetrieveObjectByUrlCacheStart[CorrelationAuxInfo[@TaskId='{$TaskID}']]]]"
+        # Modern CAPI2 events use chainRef attribute in CertificateChain elements for correlation
+        $Query = "*[UserData/CertVerifyCertificateChainPolicy/CertificateChain[@chainRef='{$TaskID}']] or 
+        *[UserData/CertGetCertificateChain/CertificateChain[@chainRef='{$TaskID}']] or
+        *[UserData/X509Objects/Certificate[@chainRef='{$TaskID}']]"
   
         $Events = Get-WinEvent -FilterXPath $Query -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated 
         if ($null -ne $Events) {
@@ -1163,8 +1159,37 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                     if ($IncludeErrorAnalysis) {
                         $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
                         if ($ErrorAnalysis) {
-                            $HtmlReport += "<h2>Error Analysis</h2>"
+                            $HtmlReport += "<h2>❌ Error Analysis</h2>"
                             $HtmlReport += $ErrorAnalysis | ConvertTo-Html -Fragment -Property TimeCreated, Severity, ErrorName, Certificate, Description, Resolution
+                            
+                            # Add resolution guidance section
+                            $HtmlReport += @"
+<h2>🔧 Resolution Guidance</h2>
+<div class='info'>
+    <p><strong>When errors are found in CAPI2 correlation chains:</strong></p>
+    <ol>
+        <li><strong>Review Error Details:</strong> Check the error name and description in the Error Analysis table above</li>
+        <li><strong>Check Certificate Status:</strong> Verify certificate validity, expiration, and trust chain</li>
+        <li><strong>Verify Certificate Store:</strong> Ensure required root/intermediate certificates are installed</li>
+        <li><strong>Check Revocation:</strong> Confirm CRL/OCSP endpoints are accessible if revocation errors occur</li>
+        <li><strong>Review Time Settings:</strong> Ensure system clock is accurate for time-based validations</li>
+        <li><strong>Examine Network Access:</strong> Verify connectivity to certificate authorities and OCSP responders</li>
+        <li><strong>Use Correlation Chain:</strong> Review all events in the chain below to understand the validation flow</li>
+    </ol>
+    <p><strong>PowerShell Commands for Troubleshooting:</strong></p>
+    <pre>Get-CapiErrorAnalysis -Events <dollarsign>Events -IncludeSummary
+Compare-CapiEvents -ReferenceEvents <dollarsign>Before -DifferenceEvents <dollarsign>After
+Get-CAPI2EventLogStatus</pre>
+</div>
+"@
+                        } else {
+                            $HtmlReport += @"
+<h2>✅ Validation Status</h2>
+<div class='info' style='background: #e7ffe7; border-left-color: #107c10;'>
+    <p style='color: #107c10; font-weight: bold;'>✓ All certificate validation operations completed successfully!</p>
+    <p>No errors were detected in the CAPI2 correlation chain. The certificate chain is trusted and all validation checks passed.</p>
+</div>
+"@
                         }
                     }
                     
