@@ -166,13 +166,13 @@ function Get-DisplayChar {
         'BoxVertical' { return [char]0x2551 }  # ║
         'BoxHorizontal' { return [char]0x2550 }  # ═
         'Checkmark' { return [char]0x2713 }  # ✓
-        'CheckmarkBold' { return [char]0x2705 }  # ✅
-        'Wrench' { return [char]0x1F527 } # 🔧
-        'Flag' { return [char]0x1F3C1 } # 🏁
-        'Lightbulb' { return [char]0x1F4A1 } # 💡
+        'CheckmarkBold' { return [char]0x2713 }  # ✓ (simplified for compatibility)
+        'Wrench' { return [char]0x2692 } # ⚒ (hammer and pick, compatible alternative)
+        'Flag' { return [char]0x2691 } # ⚑ (flag, compatible alternative)
+        'Lightbulb' { return [char]0x2600 } # ☀ (sun/bright idea, compatible alternative)
         'Warning' { return [char]0x26A0 }  # ⚠
-        'Lock' { return [char]0x1F512 } # 🔐
-        'Clipboard' { return [char]0x1F4CB } # 📋
+        'Lock' { return [char]0x2612 } # ☒ (ballot box, compatible alternative)
+        'Clipboard' { return [char]0x2630 } # ☰ (trigram, compatible alternative)
         'RightArrow' { return [char]0x2192 }  # →
         'Bullet' { return '*' }           # *
     }
