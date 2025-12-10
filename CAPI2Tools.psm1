@@ -500,15 +500,25 @@ function Get-CAPI2EventLogStatus {
 function Find-CapiEventsByName {
     <#
       .SYNOPSIS
-          Searches CAPI2 events by DNS name or certificate subject name and retrieves all correlated events.
+          Searches CAPI2 events by DNS name, certificate subject, or process name and retrieves all correlated events.
             
       .DESCRIPTION
-          This function allows administrators to find certificate validation chains by searching for a DNS name 
-          or certificate subject without needing to know the TaskID beforehand. It searches the CAPI2 log,
+          This function allows administrators to find certificate validation chains by searching for a DNS name, 
+          certificate subject, or process name without needing to know the TaskID beforehand. It searches the CAPI2 log,
           identifies all TaskIDs associated with the specified name, and retrieves all correlated events.
+          
+          Searches in the following fields:
+          - subjectName attribute (certificate subject)
+          - CN (Common Name) elements
+          - SubjectAltName/DNSName elements (SAN)
+          - ProcessName attribute (from EventAuxInfo - useful for finding events by application)
+          - Full XML content (fallback)
             
       .PARAMETER Name
-          The DNS name or certificate subject name to search for (e.g., "bing.com", "*.microsoft.com", "DigiCert")
+          The name to search for - can be:
+          - DNS name (e.g., "bing.com", "*.microsoft.com")
+          - Certificate subject or CN (e.g., "DigiCert", "VeriSign")
+          - Process name (e.g., "chrome.exe", "outlook.exe")
           Supports wildcard matching.
        
       .PARAMETER MaxEvents
@@ -531,6 +541,14 @@ function Find-CapiEventsByName {
       .EXAMPLE
           Find-CapiEventsByName -Name "DigiCert" -IncludePattern "revocation"
           Finds DigiCert certificates with revocation-related events
+          
+      .EXAMPLE
+          Find-CapiEventsByName -Name "chrome.exe"
+          Finds all certificate validations performed by Chrome browser
+          
+      .EXAMPLE
+          Find-CapiEventsByName -Name "outlook.exe" -Hours 4
+          Finds certificate events from Outlook in the last 4 hours
       
       .OUTPUTS
           Returns grouped objects with TaskID and all correlated events
@@ -589,19 +607,77 @@ function Find-CapiEventsByName {
             $WildcardPattern = "*$Name*"
             
             # Find matching events and extract TaskIDs
+            # Search in: subjectName, SubjectAltName/DNSName, CN, ProcessName
             $MatchingTaskIDs = $ConvertedEvents | Where-Object {
                 $EventXml = $_.UserData
                 if ($null -ne $EventXml) {
                     $XmlString = $EventXml.ToString()
-                    # Check for subjectName, DNSName, CN, or other certificate identifiers
-                    if ($XmlString -like $WildcardPattern) {
-                        if ($IncludePattern) {
-                            $XmlString -like "*$IncludePattern*"
+                    $IsMatch = $false
+                    
+                    # Try to parse as XML for detailed field search
+                    try {
+                        [xml]$ParsedXml = $EventXml
+                        
+                        # Search in subjectName attribute
+                        $SubjectNameNodes = $ParsedXml.SelectNodes("//*[@subjectName]")
+                        foreach ($node in $SubjectNameNodes) {
+                            if ($node.subjectName -like $WildcardPattern) {
+                                $IsMatch = $true
+                                break
+                            }
                         }
-                        else {
-                            $true
+                        
+                        # Search in CN (Common Name) elements
+                        if (-not $IsMatch) {
+                            $CNNodes = $ParsedXml.SelectNodes("//CN")
+                            foreach ($node in $CNNodes) {
+                                if ($node.InnerText -like $WildcardPattern) {
+                                    $IsMatch = $true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        # Search in SubjectAltName/DNSName elements
+                        if (-not $IsMatch) {
+                            $DNSNameNodes = $ParsedXml.SelectNodes("//SubjectAltName/DNSName")
+                            foreach ($node in $DNSNameNodes) {
+                                if ($node.InnerText -like $WildcardPattern) {
+                                    $IsMatch = $true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        # Search in ProcessName attribute (EventAuxInfo)
+                        if (-not $IsMatch) {
+                            $ProcessNameNodes = $ParsedXml.SelectNodes("//*[@ProcessName]")
+                            foreach ($node in $ProcessNameNodes) {
+                                if ($node.ProcessName -like $WildcardPattern) {
+                                    $IsMatch = $true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        # Fallback: search in entire XML string
+                        if (-not $IsMatch -and $XmlString -like $WildcardPattern) {
+                            $IsMatch = $true
                         }
                     }
+                    catch {
+                        # If XML parsing fails, fallback to string search
+                        if ($XmlString -like $WildcardPattern) {
+                            $IsMatch = $true
+                        }
+                    }
+                    
+                    # Apply additional include pattern if specified
+                    if ($IsMatch -and $IncludePattern) {
+                        $IsMatch = $XmlString -like "*$IncludePattern*"
+                    }
+                    
+                    $IsMatch
                 }
             } | ForEach-Object {
                 # Extract chainRef as TaskID from the event (modern CAPI2 correlation)
