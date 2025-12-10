@@ -208,7 +208,7 @@ function Write-BoxHeader {
     )
     
     $Width = 63
-    $Line = (Get-DisplayChar 'BoxHorizontal') * $Width
+    $Line = (Get-DisplayChar 'BoxHorizontal').ToString() * $Width
     
     $DisplayText = if ($Icon) {
         "$(Get-DisplayChar $Icon) $Text"
