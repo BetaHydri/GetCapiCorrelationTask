@@ -17,13 +17,14 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 - [Command Reference](#-command-reference)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Usage](#-usage)
+- [Usage & Troubleshooting Workflows](#-usage--troubleshooting-workflows)
+  - [Quick Start](#-quick-start)
   - [Event Log Management](#event-log-management)
   - [Search by DNS/Certificate Name](#search-by-dnscertificate-name)
   - [Error Analysis](#error-analysis)
   - [Export Functionality](#export-functionality)
   - [Comparison Features](#comparison-features)
+- [Usage](#-usage)
 - [Functions](#-functions)
 - [Examples](#-examples)
 - [Error Codes Reference](#-error-codes-reference)
@@ -207,33 +208,20 @@ Import-Module "C:\Path\To\CAPI2Tools.psm1"
 # Add to your PowerShell profile for automatic loading
 Add-Content $PROFILE "`nImport-Module CAPI2Tools"
 ```
-
 ---
 
-## ⚡ Quick Start
+## 📖 Usage & Troubleshooting Workflows
 
-### Simplest Workflow (Recommended for Most Users)
+### 🚀 Quick Start
 
-The **easiest way** to diagnose certificate issues - one command does it all:
+The fastest way to diagnose certificate issues:
 
 ```powershell
-# Just search and view results
-Get-CapiCertificateReport -Name "problematic-site.com"
+# One command - complete analysis with HTML report
+Get-CapiCertificateReport -Name "site.contoso.com" -ExportPath "C:\Reports"
 
-# Search and export to HTML (default - best for human reading)
-Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "C:\Reports"
-
-# Search, export, and open report automatically in browser
-Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "C:\Reports" -OpenReport
-
-# Export to JSON for automation/integration with monitoring tools
-Get-CapiCertificateReport -Name "api.company.com" -ExportPath "C:\Reports" -Format JSON
-
-# Export to CSV for Excel analysis or bulk processing
-Get-CapiCertificateReport -Name "*.internal.net" -ExportPath "C:\Reports" -Format CSV
-
-# Export to XML for PowerShell pipeline processing
-Get-CapiCertificateReport -Name "services.*" -ExportPath "C:\Reports" -Format XML
+# Quick console-only check
+Get-CapiCertificateReport -Name "mail.contoso.com"
 ```
 
 **Choose the right format for your needs:**
@@ -559,10 +547,12 @@ Exports CAPI2 events to various formats (CSV, JSON, HTML, XML).
 
 **Parameters**:
 - `Events` (Required): Array of CAPI2 events to export
-- `Path` (Required): Output file path
-- `Format`: CSV, JSON, HTML, or XML (auto-detected from extension)
+- `Path` (Required): Directory path (auto-generates filename) or full file path
+- `Format`: CSV, JSON, HTML, or XML (required for directory, auto-detected from file extension)
 - `IncludeErrorAnalysis`: Include error analysis in export
-- `TaskID`: TaskID for reference in export
+- `TaskID`: TaskID for reference in export and auto-generated filenames
+
+**Note**: When `Path` is a directory, filenames are automatically generated as `CapiEvents_<TaskID>.ext`
 
 ---
 
@@ -906,7 +896,7 @@ foreach ($Site in $Sites) {
     Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports" -Hours 168
 }
 
-# Advanced approach with more control - single file per site
+# Advanced approach with more control - separate export per chain
 $Sites = @("site1.com", "site2.com", "site3.com")
 foreach ($Site in $Sites) {
     $Results = Find-CapiEventsByName -Name $Site -Hours 168
@@ -914,12 +904,9 @@ foreach ($Site in $Sites) {
     if ($Results) {
         # Process each correlation chain for this site
         foreach ($Result in $Results) {
-            $SafeSiteName = $Site -replace '[\\/:*?"<>|]', '_'
-            $ShortTaskID = $Result.TaskID.Substring(0, 8)
-            $OutputFile = "$SafeSiteName`_$ShortTaskID.html"
-            
-            Export-CapiEvents -Events $Result.Events -Path "C:\Reports\$OutputFile" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
-            Write-Host "✓ Exported $Site analysis to $OutputFile" -ForegroundColor Green
+            # Export automatically generates filename: CapiEvents_<TaskID>.html
+            Export-CapiEvents -Events $Result.Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
+            Write-Host "✓ Exported $Site analysis (TaskID: $($Result.TaskID.Substring(0,8)))" -ForegroundColor Green
         }
     }
 }

@@ -1860,20 +1860,26 @@ function Export-CapiEvents {
         Array of CAPI2 events to export
         
     .PARAMETER Path
-        Output file path (extension determines format: .csv, .json, .html, .xml)
+        Output file path or directory path.
+        - If a directory: Filename is auto-generated as "CapiEvents_<TaskID>.<ext>"
+        - If a file path: Uses the specified filename and extension
+        - Extension determines format: .csv, .json, .html, .xml (if Format not specified)
         
     .PARAMETER Format
         Explicitly specify output format (CSV, JSON, HTML, XML)
+        Overrides extension-based detection. Required when Path is a directory.
         
     .PARAMETER IncludeErrorAnalysis
         Include error analysis in the export
         
     .PARAMETER TaskID
         TaskID associated with these events (for reference in export)
+        Used in auto-generated filenames when Path is a directory.
         
     .EXAMPLE
         $Events = Get-CapiTaskIDEvents -TaskID "12345..."
         Export-CapiEvents -Events $Events -Path "C:\Reports" -Format CSV -TaskID "12345..."
+        # Creates: C:\Reports\CapiEvents_12345678.csv
         
     .EXAMPLE
         $Results = Find-CapiEventsByName -Name "contoso.com"
