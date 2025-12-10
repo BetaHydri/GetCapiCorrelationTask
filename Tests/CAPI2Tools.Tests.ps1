@@ -5,13 +5,13 @@
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
-    Updated for v2.9 to include tests for multi-file export and Format parameter.
+    Updated for v2.10.1 to include tests for FilterType parameter with ValidateSet.
     
 .NOTES
-    Version:        1.3
+    Version:        1.4
     Author:         Jan Tiedemann
     Creation Date:  December 2025
-    Last Updated:   December 2025 (v2.9 multi-file export tests added)
+    Last Updated:   December 2025 (v2.10.1 FilterType tests added)
     Pester Version: 3.x compatible
     
 .EXAMPLE
@@ -271,6 +271,49 @@ Describe "CAPI2Tools Module" {
             $Function.Parameters.ContainsKey('Hours') | Should Be $true
         }
         
+        It "Should have IncludePattern parameter" {
+            $Function = Get-Command Find-CapiEventsByName
+            $Function.Parameters.ContainsKey('IncludePattern') | Should Be $true
+        }
+        
+        It "Should have FilterType parameter (v2.10.1 feature)" {
+            $Function = Get-Command Find-CapiEventsByName
+            $Function.Parameters.ContainsKey('FilterType') | Should Be $true
+        }
+        
+        It "Should have ValidateSet for FilterType parameter" {
+            $Function = Get-Command Find-CapiEventsByName
+            $FilterTypeParam = $Function.Parameters['FilterType']
+            $ValidateSet = $FilterTypeParam.Attributes | Where-Object { $_.TypeId.Name -eq 'ValidateSetAttribute' }
+            $ValidateSet | Should Not BeNullOrEmpty
+        }
+        
+        It "Should have correct FilterType values" {
+            $Function = Get-Command Find-CapiEventsByName
+            $FilterTypeParam = $Function.Parameters['FilterType']
+            $ValidateSet = $FilterTypeParam.Attributes | Where-Object { $_.TypeId.Name -eq 'ValidateSetAttribute' }
+            $ValidValues = $ValidateSet.ValidValues
+            $ValidValues -contains 'Revocation' | Should Be $true
+            $ValidValues -contains 'Expired' | Should Be $true
+            $ValidValues -contains 'Untrusted' | Should Be $true
+            $ValidValues -contains 'ChainBuilding' | Should Be $true
+            $ValidValues -contains 'PolicyValidation' | Should Be $true
+            $ValidValues -contains 'SignatureValidation' | Should Be $true
+            $ValidValues -contains 'ErrorsOnly' | Should Be $true
+        }
+        
+        It "Should reject invalid FilterType values" {
+            $ThrowsError = $false
+            try {
+                # This should throw because 'InvalidType' is not in ValidateSet
+                Find-CapiEventsByName -Name "test" -FilterType "InvalidType" -ErrorAction Stop
+            }
+            catch {
+                $ThrowsError = $true
+            }
+            $ThrowsError | Should Be $true
+        }
+        
         It "Should support enhanced multi-field search (v2.8 feature)" {
             # Create mock event with multiple searchable fields
             $MockEventXml = @'
@@ -291,6 +334,12 @@ Describe "CAPI2Tools Module" {
             $HelpText = $Help.Description.Text + $Help.examples.example.code -join ' '
             # Should mention at least one of the new search capabilities
             ($HelpText -match 'SubjectAltName|ProcessName|CN|chrome\.exe|outlook\.exe') | Should Be $true
+        }
+        
+        It "Should have help documentation for FilterType parameter" {
+            $Help = Get-Help Find-CapiEventsByName -Parameter FilterType
+            $Help | Should Not BeNullOrEmpty
+            $Help.description.Text | Should Match 'Revocation|Expired|Untrusted'
         }
     }
     
