@@ -460,7 +460,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with HTML value" {
             $TempDir = Join-Path $env:TEMP "cert_html_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -470,7 +470,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with JSON value" {
             $TempDir = Join-Path $env:TEMP "cert_json_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -480,7 +480,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with CSV value" {
             $TempDir = Join-Path $env:TEMP "cert_csv_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -490,7 +490,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with XML value" {
             $TempDir = Join-Path $env:TEMP "cert_xml_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -519,7 +519,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept all parameters together" {
             $TempDir = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 1 -ShowDetails -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 1 -ShowDetails -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
