@@ -19,12 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Certificate Validation**: CERT_E_PURPOSE, CERT_E_PATHLENCONST, CERT_E_CRITICAL, CERT_E_VALIDITYPERIODNESTING, CERT_E_INVALID_POLICY
   - **TLS/SSL Errors**: SEC_E_INVALID_TOKEN, SEC_E_UNTRUSTED_ROOT, SEC_E_WRONG_PRINCIPAL, SEC_E_CERT_EXPIRED, SEC_E_LOGON_DENIED
   - **Cryptographic**: TRUST_E_BAD_DIGEST, CRYPT_E_SECURITY_SETTINGS
+- **Certificate Thumbprint Extraction**: Error analysis now extracts and displays certificate thumbprints
+  - Extracted from `fileRef` attribute in CAPI2 events
+  - Displayed in console output, HTML reports, and all export formats
+  - Useful for tracking specific certificates and troubleshooting
 
 ### Improved
 - **Correlation Chain Analysis**: Event ID 82 now included in TaskID-based correlation chains
 - **Diagnostic Coverage**: Complete visibility into catalog-based signature validation failures
 - **Error Resolution Guidance**: Enhanced CommonCause and Resolution descriptions for new error codes
 - **Enterprise Support**: Better coverage of Group Policy, TLS inspection, and mutual authentication scenarios
+- **Certificate Identification**: Thumbprint display enables quick certificate lookup in certificate stores
 
 ---
 

@@ -1285,10 +1285,15 @@ function Get-CapiErrorAnalysis {
                     # Extract certificate information
                     $CertSubject = ""
                     $CertIssuer = ""
+                    $CertThumbprint = ""
                     
                     $CertNode = $EventXml.SelectSingleNode("//Certificate[@subjectName]")
                     if ($CertNode) {
                         $CertSubject = $CertNode.subjectName
+                        # Extract thumbprint from fileRef attribute (format: "THUMBPRINT.cer")
+                        if ($CertNode.fileRef) {
+                            $CertThumbprint = $CertNode.fileRef -replace '\.cer$', ''
+                        }
                     }
                     
                     $IssuerNode = $EventXml.SelectSingleNode("//IssuerCertificate[@subjectName]")
@@ -1319,6 +1324,7 @@ function Get-CapiErrorAnalysis {
                         ErrorName   = $ErrorDetails.HexCode
                         Description = $ErrorDetails.Description
                         Certificate = $CertSubject
+                        Thumbprint  = $CertThumbprint
                         Issuer      = $CertIssuer
                         Process     = $ProcessName
                         CommonCause = $ErrorDetails.CommonCause
@@ -1354,7 +1360,7 @@ function Get-CapiErrorAnalysis {
         Write-Host "Found $($ErrorTable.Count) error(s) in the certificate validation chain.`n" -ForegroundColor Yellow
         
         # Display detailed error table
-        $ErrorTable | Format-Table -Property TimeCreated, Severity, ErrorName, Certificate, Description -AutoSize -Wrap
+        $ErrorTable | Format-Table -Property TimeCreated, Severity, ErrorName, Certificate, Thumbprint, Description -AutoSize -Wrap
         
         Write-Host "`n=== Detailed Error Information ===" -ForegroundColor Cyan
         
@@ -1368,6 +1374,9 @@ function Get-CapiErrorAnalysis {
                 }
             )
             Write-Host "  Certificate:   $($ErrorEntry.Certificate)" -ForegroundColor Gray
+            if ($ErrorEntry.Thumbprint) {
+                Write-Host "  Thumbprint:    $($ErrorEntry.Thumbprint)" -ForegroundColor Gray
+            }
             if ($ErrorEntry.Issuer) {
                 Write-Host "  Issuer:        $($ErrorEntry.Issuer)" -ForegroundColor Gray
             }
@@ -1583,6 +1592,7 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
             <th>Severity</th>
             <th>Error</th>
             <th>Certificate</th>
+            <th>Thumbprint</th>
             <th>Description</th>
             <th>Trust Chain Details</th>
         </tr>
@@ -1625,6 +1635,7 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
             <td class='$SeverityClass'>$($ErrorEntry.Severity)</td>
             <td><strong>$($ErrorEntry.ErrorName)</strong></td>
             <td>$($ErrorEntry.Certificate)</td>
+            <td style='font-family: monospace; font-size: 0.85em;'>$($ErrorEntry.Thumbprint)</td>
             <td>$($ErrorEntry.Description)<br><br><strong>Resolution:</strong> $($ErrorEntry.Resolution)</td>
             <td>$TrustHtml</td>
         </tr>

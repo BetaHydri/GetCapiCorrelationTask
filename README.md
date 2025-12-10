@@ -52,6 +52,7 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 - 🔗 **Complete Correlation Chains**: Event ID 82 now visible in TaskID-based correlation analysis
 - 📚 **12 New Error Codes**: Expanded coverage with CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, and 9 more common errors
 - 🏢 **Enterprise Support**: Better diagnostics for Group Policy restrictions, TLS inspection, and mutual authentication
+- 🔐 **Certificate Thumbprints**: Error analysis now extracts and displays certificate thumbprints for easy identification
 
 ### What's New in v2.10
 
@@ -836,7 +837,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------||
-| 2.10.1 | December 2025 | Event ID 82 support (catalog lookup failures), 13 new error codes (ERROR_NOT_FOUND, CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, etc.), enhanced enterprise diagnostics, informational severity for catalog lookups |
+| 2.10.1 | December 2025 | Event ID 82 support (catalog lookup failures), 13 new error codes (ERROR_NOT_FOUND, CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, etc.), certificate thumbprint extraction and display, enhanced enterprise diagnostics |
 | 2.10 | December 2025 | TrustStatus parsing with 23 ErrorStatus and 13 InfoStatus flags, enhanced error analysis with detailed trust chain validation, improved HTML reports with trust details column, automatic severity tracking (Critical/Error/Warning), comprehensive certificate chain diagnostics |
 | 2.9 | December 2025 | Multi-file export (each chain to separate file), smart auto-generated filenames, directory-based ExportPath, Format parameter with ValidateSet, eliminated file overwrite issues |
 | 2.8 | December 2025 | Enhanced multi-field search (SubjectAltName, CN, ProcessName), process-based correlation, simplified usage with automatic field searching, priority-based matching |
