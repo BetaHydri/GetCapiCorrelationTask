@@ -1491,13 +1491,15 @@ function Get-CapiCertificateReport {
         Perfect for quickly diagnosing certificate validation issues without writing complex scripts.
         
         The function will:
-        1. Search for certificate events by name
+        1. Search for certificate events by name (searches SubjectAltName, CN, ProcessName, and more)
         2. Automatically analyze errors if found
         3. Optionally export results to HTML, JSON, CSV, or XML
         4. Display a summary of findings
         
     .PARAMETER Name
-        DNS name, certificate subject, or issuer to search for (supports wildcards)
+        DNS name, certificate subject (CN/SubjectAltName), process name, or issuer to search for.
+        Automatically searches across multiple fields: subjectName, CN, SubjectAltName/DNSName, ProcessName.
+        Supports wildcards for flexible matching.
         
     .PARAMETER ExportPath
         Full file path including filename and extension for the report.
@@ -1533,6 +1535,14 @@ function Get-CapiCertificateReport {
     .EXAMPLE
         Get-CapiCertificateReport -Name "badssl" -Hours 2 -ShowDetails -ExportPath "badssl_errors.json"
         Search last 2 hours for badssl events, show detailed analysis, and export to JSON
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "chrome.exe" -Hours 4
+        Find all certificate validations made by Chrome in the last 4 hours
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "GlobalSecureAccessClient.exe" -ExportPath "gsa_report.html"
+        Find all certificate validations by Global Secure Access Client and export to HTML
         
     .NOTES
         This is the recommended function for most users. It simplifies the workflow from:

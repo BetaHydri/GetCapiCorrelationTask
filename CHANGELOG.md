@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.8.0] - 2025-12-10
+
+### Added
+- **Enhanced Multi-Field Search**: `Find-CapiEventsByName` now searches across multiple certificate and process fields:
+  - `subjectName` attribute (most common in Event ID 30)
+  - `CN` (Common Name) elements in certificate subjects
+  - `SubjectAltName/DNSName` elements (SAN fields in Event ID 90)
+  - `ProcessName` attribute (via EventAuxInfo in Event ID 30)
+  - Full XML string search as fallback
+- **Process-Based Correlation**: Can now search for certificate validations by process name (e.g., "chrome.exe", "outlook.exe", "GlobalSecureAccessClient.exe")
+- **Priority-Based Search**: Implements intelligent search order for faster, more accurate results
+
+### Changed
+- **Get-CapiCertificateReport**: Now automatically benefits from enhanced multi-field search - simply use `-Name` parameter with any certificate field or process name
+- **Search Documentation**: Updated help documentation with new examples showing process-based searches
+- **Parameter Description**: Enhanced `-Name` parameter documentation to clearly indicate all searchable fields
+
+### Improved
+- **User Experience**: Simplified usage - no need to specify which field to search, the toolkit automatically searches all relevant fields
+- **Search Accuracy**: Priority-based matching ensures most relevant results are found first
+- **Performance**: Efficient XML parsing with early termination when match is found
+
+---
+
 ## [2.7.0] - 2025-12-10
 
 ### Fixed

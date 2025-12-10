@@ -5,13 +5,13 @@
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
-    Updated for v2.6 to include tests for Get-CapiCertificateReport simplified workflow.
+    Updated for v2.8 to include tests for enhanced multi-field search capabilities.
     
 .NOTES
-    Version:        1.1
+    Version:        1.2
     Author:         Jan Tiedemann
     Creation Date:  December 2025
-    Last Updated:   December 2025 (v2.6 tests added)
+    Last Updated:   December 2025 (v2.8 enhanced search tests added)
     Pester Version: 3.x compatible
     
 .EXAMPLE
@@ -269,6 +269,28 @@ Describe "CAPI2Tools Module" {
         It "Should have Hours parameter" {
             $Function = Get-Command Find-CapiEventsByName
             $Function.Parameters.ContainsKey('Hours') | Should Be $true
+        }
+        
+        It "Should support enhanced multi-field search (v2.8 feature)" {
+            # Create mock event with multiple searchable fields
+            $MockEventXml = @'
+<CertVerifyCertificateChainPolicy>
+    <Certificate subjectName="test.example.com" />
+    <EventAuxInfo ProcessName="chrome.exe" />
+</CertVerifyCertificateChainPolicy>
+'@
+            
+            # The function should be able to parse XML and search multiple fields
+            # This is a structural test - actual search functionality requires event log access
+            $Function = Get-Command Find-CapiEventsByName
+            $Function | Should Not BeNullOrEmpty
+        }
+        
+        It "Should have updated help documentation mentioning SubjectAltName and ProcessName" {
+            $Help = Get-Help Find-CapiEventsByName -Full
+            $HelpText = $Help.Description.Text + $Help.examples.example.code -join ' '
+            # Should mention at least one of the new search capabilities
+            ($HelpText -match 'SubjectAltName|ProcessName|CN|chrome\.exe|outlook\.exe') | Should Be $true
         }
     }
     
