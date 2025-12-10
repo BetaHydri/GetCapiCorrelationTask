@@ -431,7 +431,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             Test-Path $TempDir | Should Be $false
             
             # Call with ExportPath - should create directory even if no events found
-            Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -Hours 0.01 -ErrorAction SilentlyContinue
+            Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -Hours 1 -ErrorAction SilentlyContinue
             
             # Directory should now exist (created by the function)
             Test-Path $TempDir | Should Be $true
@@ -450,8 +450,9 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             # Verify it's a file
             Test-Path $TempFile -PathType Leaf | Should Be $true
             
-            # Should throw error when ExportPath is a file
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
+            # Should write error when ExportPath is a file
+            $ErrorOutput = Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction SilentlyContinue 2>&1
+            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
             
             # Clean up
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -500,8 +501,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Format parameter should reject invalid values" {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            # Should throw because 'TXT' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should Throw
+            # Should throw because 'TXT' is not in ValidateSet (parameter binding error)
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -Hours 1 } | Should Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -551,16 +552,17 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             # Create a file (not directory)
             "test" | Out-File $TempFile
             
-            # This should throw an error (remove SilentlyContinue to allow error to propagate)
-            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should Throw
+            # Should write error when ExportPath is a file (Write-Error doesn't throw, just outputs to error stream)
+            $ErrorOutput = Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction SilentlyContinue 2>&1
+            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
             
             # Cleanup
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
         }
         
         It "Should reject invalid Format values" {
-            # This should throw a parameter validation error because 'PDF' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" 2>&1 } | Should Throw
+            # This should throw a parameter validation error because 'PDF' is not in ValidateSet (parameter binding error)
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" -Hours 1 } | Should Throw
         }
     }
 }
