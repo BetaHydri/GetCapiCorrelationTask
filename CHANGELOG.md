@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.10.0] - 2025-12-10
+
+### Added
+- **TrustStatus Parsing**: New `Get-TrustStatusDetails` function extracts and parses TrustStatus XML elements from CAPI2 events
+- **ErrorStatus Flag Mapping**: Comprehensive mapping of 23 certificate trust error flags:
+  - `CERT_TRUST_IS_NOT_TIME_VALID`: Certificate expired or not yet valid
+  - `CERT_TRUST_IS_REVOKED`: Certificate explicitly revoked
+  - `CERT_TRUST_IS_NOT_SIGNATURE_VALID`: Invalid certificate signature
+  - `CERT_TRUST_IS_UNTRUSTED_ROOT`: Chain terminated in untrusted root
+  - `CERT_TRUST_REVOCATION_STATUS_UNKNOWN`: Cannot determine revocation status
+  - `CERT_TRUST_IS_OFFLINE_REVOCATION`: Revocation server offline
+  - `CERT_TRUST_HAS_WEAK_SIGNATURE`: Weak cryptographic signature detected
+  - `CERT_TRUST_IS_EXPLICIT_DISTRUST`: Certificate explicitly distrusted
+  - And 15 more validation error flags
+- **InfoStatus Flag Mapping**: 13 informational trust flags including:
+  - `CERT_TRUST_HAS_PREFERRED_ISSUER`: Preferred issuer found
+  - `CERT_TRUST_IS_SELF_SIGNED`: Self-signed certificate detected
+  - `CERT_TRUST_HAS_KEY_MATCH_ISSUER`: Key-based issuer matching
+  - And 10 more informational flags
+- **Enhanced Error Analysis**: `Get-CapiErrorAnalysis` now includes TrustStatus information for each error
+- **TrustStatus Display**: Console output shows trust chain validation errors and informational flags with severity indicators
+- **Automatic Severity Tracking**: TrustStatus automatically calculates highest severity (Critical/Error/Warning) from flags
+
+### Changed
+- **Error Entry Objects**: Added `TrustStatus` property to error analysis objects containing ErrorFlags and InfoFlags arrays
+- **HTML Export Format**: Redesigned error analysis table with dedicated "Trust Chain Details" column showing:
+  - Trust validation errors with flag names and descriptions
+  - Informational flags with context about chain construction
+  - Color-coded severity indicators (red for errors, blue for info)
+- **JSON Export**: TrustStatus information now included in ErrorAnalysis output
+- **Console Output**: Enhanced error display with expandable trust chain details section
+
+### Improved
+- **Diagnostic Capabilities**: Provides exact detail on which trust checks failed (e.g., time validity, signature validation, revocation status)
+- **Error Root Cause Analysis**: Easier to identify certificate chain issues with specific flag information
+- **Report Comprehensiveness**: HTML reports now show complete picture of certificate validation including trust chain details
+- **User Understanding**: Clear, human-readable descriptions for all trust status flags
+
+### Technical Details
+- Bit flag parsing for ErrorStatus and InfoStatus values
+- XPath queries to extract chain-level and per-certificate TrustStatus elements
+- Supports both decimal and hexadecimal flag value formats
+- Compatible with Event IDs 11, 30, 90, and other CAPI2 events containing TrustStatus
+
+---
+
 ## [2.9.0] - 2025-12-10
 
 ### Added

@@ -8,7 +8,7 @@
     
 .NOTES
     Module Name:    CAPI2Tools
-    Version:        2.9.0
+    Version:        2.10.0
     Author:         Jan Tiedemann
     Copyright:      (c) 2022-2025 Jan Tiedemann. Licensed under GNU GPL v3.
     
@@ -102,6 +102,49 @@ $Script:CAPI2ErrorCodes = @{
     }
 }
 
+# CAPI2 TrustStatus Flag Reference
+# ErrorStatus flags indicate trust chain validation errors
+$Script:TrustStatusErrorFlags = @{
+    '0x00000001' = @{ Flag = 'CERT_TRUST_IS_NOT_TIME_VALID'; Description = 'Certificate is not within its validity period'; Severity = 'Critical' }
+    '0x00000002' = @{ Flag = 'CERT_TRUST_IS_NOT_TIME_NESTED'; Description = 'Certificate validity period does not nest correctly'; Severity = 'Error' }
+    '0x00000004' = @{ Flag = 'CERT_TRUST_IS_REVOKED'; Description = 'Certificate has been explicitly revoked'; Severity = 'Critical' }
+    '0x00000008' = @{ Flag = 'CERT_TRUST_IS_NOT_SIGNATURE_VALID'; Description = 'Certificate signature is not valid'; Severity = 'Critical' }
+    '0x00000010' = @{ Flag = 'CERT_TRUST_IS_NOT_VALID_FOR_USAGE'; Description = 'Certificate is not valid for requested usage'; Severity = 'Error' }
+    '0x00000020' = @{ Flag = 'CERT_TRUST_IS_UNTRUSTED_ROOT'; Description = 'Certificate chain terminated in untrusted root'; Severity = 'Critical' }
+    '0x00000040' = @{ Flag = 'CERT_TRUST_REVOCATION_STATUS_UNKNOWN'; Description = 'Revocation status could not be determined'; Severity = 'Warning' }
+    '0x00000080' = @{ Flag = 'CERT_TRUST_IS_CYCLIC'; Description = 'Certificate chain contains a cycle'; Severity = 'Error' }
+    '0x00000100' = @{ Flag = 'CERT_TRUST_INVALID_EXTENSION'; Description = 'Certificate has unsupported critical extension'; Severity = 'Error' }
+    '0x00000200' = @{ Flag = 'CERT_TRUST_INVALID_POLICY_CONSTRAINTS'; Description = 'Certificate policy constraints are invalid'; Severity = 'Error' }
+    '0x00000400' = @{ Flag = 'CERT_TRUST_INVALID_BASIC_CONSTRAINTS'; Description = 'Certificate basic constraints are invalid'; Severity = 'Error' }
+    '0x00000800' = @{ Flag = 'CERT_TRUST_INVALID_NAME_CONSTRAINTS'; Description = 'Certificate name constraints are invalid'; Severity = 'Error' }
+    '0x00001000' = @{ Flag = 'CERT_TRUST_HAS_NOT_SUPPORTED_NAME_CONSTRAINT'; Description = 'Certificate has unsupported name constraint'; Severity = 'Warning' }
+    '0x00002000' = @{ Flag = 'CERT_TRUST_HAS_NOT_DEFINED_NAME_CONSTRAINT'; Description = 'Certificate has undefined name constraint'; Severity = 'Warning' }
+    '0x00004000' = @{ Flag = 'CERT_TRUST_HAS_NOT_PERMITTED_NAME_CONSTRAINT'; Description = 'Certificate has not permitted name constraint'; Severity = 'Error' }
+    '0x00008000' = @{ Flag = 'CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT'; Description = 'Certificate has excluded name constraint'; Severity = 'Error' }
+    '0x01000000' = @{ Flag = 'CERT_TRUST_IS_OFFLINE_REVOCATION'; Description = 'Revocation server was offline'; Severity = 'Warning' }
+    '0x02000000' = @{ Flag = 'CERT_TRUST_NO_ISSUANCE_CHAIN_POLICY'; Description = 'No issuance chain policy found'; Severity = 'Warning' }
+    '0x04000000' = @{ Flag = 'CERT_TRUST_IS_EXPLICIT_DISTRUST'; Description = 'Certificate is explicitly distrusted'; Severity = 'Critical' }
+    '0x08000000' = @{ Flag = 'CERT_TRUST_HAS_NOT_SUPPORTED_CRITICAL_EXT'; Description = 'Certificate has unsupported critical extension'; Severity = 'Error' }
+    '0x10000000' = @{ Flag = 'CERT_TRUST_HAS_WEAK_SIGNATURE'; Description = 'Certificate has weak cryptographic signature'; Severity = 'Warning' }
+}
+
+# InfoStatus flags provide additional trust chain information
+$Script:TrustStatusInfoFlags = @{
+    '0x00000001' = @{ Flag = 'CERT_TRUST_HAS_EXACT_MATCH_ISSUER'; Description = 'Exact match issuer certificate found' }
+    '0x00000002' = @{ Flag = 'CERT_TRUST_HAS_KEY_MATCH_ISSUER'; Description = 'Key match issuer certificate found' }
+    '0x00000004' = @{ Flag = 'CERT_TRUST_HAS_NAME_MATCH_ISSUER'; Description = 'Name match issuer certificate found' }
+    '0x00000008' = @{ Flag = 'CERT_TRUST_IS_SELF_SIGNED'; Description = 'Certificate is self-signed' }
+    '0x00000010' = @{ Flag = 'CERT_TRUST_AUTO_UPDATE_CA_REVOCATION'; Description = 'Auto update CA revocation enabled' }
+    '0x00000020' = @{ Flag = 'CERT_TRUST_AUTO_UPDATE_END_REVOCATION'; Description = 'Auto update end entity revocation enabled' }
+    '0x00000040' = @{ Flag = 'CERT_TRUST_NO_OCSP_FAILOVER_TO_CRL'; Description = 'No OCSP failover to CRL' }
+    '0x00000100' = @{ Flag = 'CERT_TRUST_HAS_PREFERRED_ISSUER'; Description = 'Preferred issuer certificate found' }
+    '0x00000200' = @{ Flag = 'CERT_TRUST_HAS_ISSUANCE_CHAIN_POLICY'; Description = 'Issuance chain policy present' }
+    '0x00000400' = @{ Flag = 'CERT_TRUST_HAS_VALID_NAME_CONSTRAINTS'; Description = 'Valid name constraints present' }
+    '0x00010000' = @{ Flag = 'CERT_TRUST_IS_PEER_TRUSTED'; Description = 'Certificate is peer trusted' }
+    '0x00020000' = @{ Flag = 'CERT_TRUST_HAS_CRL_VALIDITY_EXTENDED'; Description = 'CRL validity period extended' }
+    '0x01000000' = @{ Flag = 'CERT_TRUST_IS_COMPLEX_CHAIN'; Description = 'Certificate chain is complex' }
+}
+
 function Get-CAPI2ErrorDetails {
     <#
     .SYNOPSIS
@@ -141,6 +184,106 @@ function Get-CAPI2ErrorDetails {
             Severity    = 'Unknown'
         }
     }
+}
+
+function Get-TrustStatusDetails {
+    <#
+    .SYNOPSIS
+        Parses TrustStatus XML elements and returns detailed flag information.
+        
+    .DESCRIPTION
+        Extracts ErrorStatus and InfoStatus values from TrustStatus elements in CAPI2 events,
+        parses the bit flags, and returns human-readable descriptions.
+        
+    .PARAMETER TrustStatusNode
+        XML node containing TrustStatus element with ErrorStatus and InfoStatus children
+        
+    .EXAMPLE
+        $TrustNode = $EventXml.SelectSingleNode("//TrustStatus")
+        Get-TrustStatusDetails -TrustStatusNode $TrustNode
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Xml.XmlElement]$TrustStatusNode
+    )
+    
+    $Result = [PSCustomObject]@{
+        ErrorFlags = @()
+        InfoFlags  = @()
+        HasErrors  = $false
+        Severity   = 'Info'
+    }
+    
+    # Parse ErrorStatus
+    $ErrorStatusNode = $TrustStatusNode.SelectSingleNode("ErrorStatus[@value]")
+    if ($ErrorStatusNode) {
+        $ErrorValue = $ErrorStatusNode.GetAttribute('value')
+        
+        if ($ErrorValue -ne "0") {
+            $Result.HasErrors = $true
+            
+            # Convert to integer for bit manipulation
+            $ErrorInt = if ($ErrorValue -match '^0x') {
+                [Convert]::ToInt64($ErrorValue, 16)
+            } else {
+                [int64]$ErrorValue
+            }
+            
+            # Check each error flag bit
+            foreach ($FlagEntry in $Script:TrustStatusErrorFlags.GetEnumerator()) {
+                $FlagValue = [Convert]::ToInt64($FlagEntry.Key, 16)
+                
+                if (($ErrorInt -band $FlagValue) -eq $FlagValue) {
+                    $FlagInfo = $FlagEntry.Value
+                    $Result.ErrorFlags += [PSCustomObject]@{
+                        Flag        = $FlagInfo.Flag
+                        Description = $FlagInfo.Description
+                        Severity    = $FlagInfo.Severity
+                    }
+                    
+                    # Track highest severity
+                    if ($FlagInfo.Severity -eq 'Critical') {
+                        $Result.Severity = 'Critical'
+                    }
+                    elseif ($FlagInfo.Severity -eq 'Error' -and $Result.Severity -ne 'Critical') {
+                        $Result.Severity = 'Error'
+                    }
+                    elseif ($FlagInfo.Severity -eq 'Warning' -and $Result.Severity -notin @('Critical', 'Error')) {
+                        $Result.Severity = 'Warning'
+                    }
+                }
+            }
+        }
+    }
+    
+    # Parse InfoStatus
+    $InfoStatusNode = $TrustStatusNode.SelectSingleNode("InfoStatus[@value]")
+    if ($InfoStatusNode) {
+        $InfoValue = $InfoStatusNode.GetAttribute('value')
+        
+        # Convert to integer for bit manipulation
+        $InfoInt = if ($InfoValue -match '^0x') {
+            [Convert]::ToInt64($InfoValue, 16)
+        } else {
+            [int64]$InfoValue
+        }
+        
+        # Check each info flag bit
+        foreach ($FlagEntry in $Script:TrustStatusInfoFlags.GetEnumerator()) {
+            $FlagValue = [Convert]::ToInt64($FlagEntry.Key, 16)
+            
+            if (($InfoInt -band $FlagValue) -eq $FlagValue) {
+                $FlagInfo = $FlagEntry.Value
+                $Result.InfoFlags += [PSCustomObject]@{
+                    Flag        = $FlagInfo.Flag
+                    Description = $FlagInfo.Description
+                }
+            }
+        }
+    }
+    
+    return $Result
 }
 
 #endregion
@@ -1054,19 +1197,27 @@ function Get-CapiErrorAnalysis {
                         $ProcessName = $ProcessNode.ProcessName
                     }
                     
+                    # Parse TrustStatus information (chain-level and per-certificate)
+                    $TrustStatusInfo = $null
+                    $ChainTrustStatus = $EventXml.SelectSingleNode("//CertificateChain/TrustStatus")
+                    if ($ChainTrustStatus) {
+                        $TrustStatusInfo = Get-TrustStatusDetails -TrustStatusNode $ChainTrustStatus
+                    }
+                    
                     # Create error entry
                     $ErrorEntry = [PSCustomObject]@{
-                        TimeCreated = $CurrentEvent.TimeCreated
-                        EventID     = $CurrentEvent.ID
-                        Severity    = $ErrorDetails.Severity
-                        ErrorCode   = $ErrorDetails.Code
-                        ErrorName   = $ErrorDetails.HexCode
-                        Description = $ErrorDetails.Description
-                        Certificate = $CertSubject
-                        Issuer      = $CertIssuer
-                        Process     = $ProcessName
-                        CommonCause = $ErrorDetails.CommonCause
-                        Resolution  = $ErrorDetails.Resolution
+                        TimeCreated      = $CurrentEvent.TimeCreated
+                        EventID          = $CurrentEvent.ID
+                        Severity         = $ErrorDetails.Severity
+                        ErrorCode        = $ErrorDetails.Code
+                        ErrorName        = $ErrorDetails.HexCode
+                        Description      = $ErrorDetails.Description
+                        Certificate      = $CertSubject
+                        Issuer           = $CertIssuer
+                        Process          = $ProcessName
+                        CommonCause      = $ErrorDetails.CommonCause
+                        Resolution       = $ErrorDetails.Resolution
+                        TrustStatus      = $TrustStatusInfo
                     }
                     
                     $ErrorTable += $ErrorEntry
@@ -1117,6 +1268,33 @@ function Get-CapiErrorAnalysis {
             Write-Host "  Description:   $($ErrorEntry.Description)" -ForegroundColor White
             Write-Host "  Common Cause:  $($ErrorEntry.CommonCause)" -ForegroundColor Yellow
             Write-Host "  Resolution:    $($ErrorEntry.Resolution)" -ForegroundColor Green
+            
+            # Display TrustStatus details if available
+            if ($ErrorEntry.TrustStatus) {
+                $Trust = $ErrorEntry.TrustStatus
+                
+                if ($Trust.ErrorFlags.Count -gt 0) {
+                    Write-Host "`n  Trust Chain Validation Errors:" -ForegroundColor Red
+                    foreach ($Flag in $Trust.ErrorFlags) {
+                        $FlagColor = switch ($Flag.Severity) {
+                            'Critical' { 'Red' }
+                            'Error' { 'Red' }
+                            'Warning' { 'Yellow' }
+                            default { 'White' }
+                        }
+                        Write-Host "    $(Get-DisplayChar 'Warning') [$($Flag.Severity)] $($Flag.Flag)" -ForegroundColor $FlagColor
+                        Write-Host "       $($Flag.Description)" -ForegroundColor Gray
+                    }
+                }
+                
+                if ($Trust.InfoFlags.Count -gt 0) {
+                    Write-Host "`n  Trust Chain Information:" -ForegroundColor Cyan
+                    foreach ($Flag in $Trust.InfoFlags) {
+                        Write-Host "    $(Get-DisplayChar 'Checkmark') $($Flag.Flag)" -ForegroundColor Gray
+                        Write-Host "       $($Flag.Description)" -ForegroundColor DarkGray
+                    }
+                }
+            }
         }
         
         # Display summary if requested
@@ -1289,7 +1467,67 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                         $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
                         if ($ErrorAnalysis) {
                             $HtmlReport += "<h2>❌ Error Analysis</h2>"
-                            $HtmlReport += $ErrorAnalysis | ConvertTo-Html -Fragment -Property TimeCreated, Severity, ErrorName, Certificate, Description, Resolution
+                            
+                            # Build custom HTML table with TrustStatus details
+                            $HtmlReport += @"
+<table>
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Severity</th>
+            <th>Error</th>
+            <th>Certificate</th>
+            <th>Description</th>
+            <th>Trust Chain Details</th>
+        </tr>
+    </thead>
+    <tbody>
+"@
+                            foreach ($Error in $ErrorAnalysis) {
+                                $SeverityClass = switch ($Error.Severity) {
+                                    'Critical' { 'error' }
+                                    'Error' { 'error' }
+                                    'Warning' { 'warning' }
+                                    default { '' }
+                                }
+                                
+                                # Build TrustStatus HTML
+                                $TrustHtml = ""
+                                if ($Error.TrustStatus) {
+                                    if ($Error.TrustStatus.ErrorFlags.Count -gt 0) {
+                                        $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #d13438;'>Trust Errors:</strong><ul style='margin: 5px 0; padding-left: 20px;'>"
+                                        foreach ($Flag in $Error.TrustStatus.ErrorFlags) {
+                                            $TrustHtml += "<li><strong>$($Flag.Flag)</strong><br><span style='color: #666; font-size: 0.9em;'>$($Flag.Description)</span></li>"
+                                        }
+                                        $TrustHtml += "</ul></div>"
+                                    }
+                                    if ($Error.TrustStatus.InfoFlags.Count -gt 0) {
+                                        $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #0078d4;'>Trust Info:</strong><ul style='margin: 5px 0; padding-left: 20px; font-size: 0.9em;'>"
+                                        foreach ($Flag in $Error.TrustStatus.InfoFlags) {
+                                            $TrustHtml += "<li style='color: #666;'>$($Flag.Flag)</li>"
+                                        }
+                                        $TrustHtml += "</ul></div>"
+                                    }
+                                }
+                                if (-not $TrustHtml) {
+                                    $TrustHtml = "<span style='color: #999;'>No chain details</span>"
+                                }
+                                
+                                $HtmlReport += @"
+        <tr>
+            <td class='timestamp'>$($Error.TimeCreated)</td>
+            <td class='$SeverityClass'>$($Error.Severity)</td>
+            <td><strong>$($Error.ErrorName)</strong></td>
+            <td>$($Error.Certificate)</td>
+            <td>$($Error.Description)<br><br><strong>Resolution:</strong> $($Error.Resolution)</td>
+            <td>$TrustHtml</td>
+        </tr>
+"@
+                            }
+                            $HtmlReport += @"
+    </tbody>
+</table>
+"@
                             
                             # Add resolution guidance section
                             $HtmlReport += @"

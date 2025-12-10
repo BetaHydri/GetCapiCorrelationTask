@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.9-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.10-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,17 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.9** introduces multi-file export and simplified format selection, eliminating file overwrite issues when multiple correlation chains are found.
+**Version 2.10** introduces comprehensive TrustStatus parsing for detailed certificate chain validation analysis.
+
+### What's New in v2.10
+
+- 🔐 **TrustStatus Parsing**: Extracts and analyzes ErrorStatus and InfoStatus flags from certificate chain validation
+- 📊 **23 Error Flags Mapped**: CERT_TRUST_IS_NOT_TIME_VALID, CERT_TRUST_IS_REVOKED, CERT_TRUST_HAS_WEAK_SIGNATURE, etc.
+- ℹ️ **13 Info Flags**: Issuer matching, self-signed detection, preferred issuer identification
+- ⚠️ **Enhanced Error Analysis**: `Get-CapiErrorAnalysis` now shows exactly which trust checks failed
+- 📋 **Detailed HTML Reports**: Trust chain errors and info displayed with severity indicators
+- 🎯 **Automatic Severity Tracking**: Critical/Error/Warning classification from trust validation flags
+- 📦 **All Export Formats**: TrustStatus included in HTML, JSON, CSV, and XML exports
 
 ### What's New in v2.9
 
@@ -817,6 +827,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------||
+| 2.10 | December 2025 | TrustStatus parsing with 23 ErrorStatus and 13 InfoStatus flags, enhanced error analysis with detailed trust chain validation, improved HTML reports with trust details column, automatic severity tracking (Critical/Error/Warning), comprehensive certificate chain diagnostics |
 | 2.9 | December 2025 | Multi-file export (each chain to separate file), smart auto-generated filenames, directory-based ExportPath, Format parameter with ValidateSet, eliminated file overwrite issues |
 | 2.8 | December 2025 | Enhanced multi-field search (SubjectAltName, CN, ProcessName), process-based correlation, simplified usage with automatic field searching, priority-based matching |
 | 2.7 | December 2025 | Fixed correlation chain retrieval with dual mechanism support (chainRef + CorrelationAuxInfo TaskId), fixed error detection XML namespace issues, normalized hex error code handling, enhanced modern CAPI2 event support |
