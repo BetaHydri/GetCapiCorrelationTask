@@ -570,7 +570,7 @@ Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\issue_report.html" -IncludeErrorAnalysis
 ```
 
-### Example 3: Track Fix Progress
+### Example 4: Track Fix Progress (Advanced)
 
 ```powershell
 # Capture baseline
@@ -585,7 +585,7 @@ $After = Find-CapiEventsByName -Name "myapp.company.com"
 Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events
 ```
 
-### Example 3: Investigate Specific Error
+### Example 5: Investigate Specific Error (Advanced)
 
 ```powershell
 # Find events with revocation errors
@@ -599,12 +599,17 @@ $CriticalErrors = $Analysis | Where-Object { $_.Severity -eq "Critical" }
 $CriticalErrors | Format-Table ErrorName, Certificate, Resolution -Wrap
 ```
 
-### Example 4: Bulk Analysis and Reporting
+### Example 6: Bulk Analysis and Reporting
 
 ```powershell
-# Search for multiple sites
+# ⭐ Simplified approach
 $Sites = @("site1.com", "site2.com", "site3.com")
+foreach ($Site in $Sites) {
+    Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports\$($Site)_report.html" -Hours 168
+}
 
+# Advanced approach with more control
+$Sites = @("site1.com", "site2.com", "site3.com")
 foreach ($Site in $Sites) {
     $Results = Find-CapiEventsByName -Name $Site -Hours 168
     
@@ -616,7 +621,7 @@ foreach ($Site in $Sites) {
 }
 ```
 
-### Example 5: Monitor Application Certificate Usage
+### Example 7: Monitor Application Certificate Usage
 
 ```powershell
 # Enable logging
