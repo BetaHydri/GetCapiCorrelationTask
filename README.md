@@ -1366,7 +1366,40 @@ If searches return no results:
 3. **Check event log**: Verify events exist: `Get-WinEvent -LogName Microsoft-Windows-CAPI2/Operational -MaxEvents 10`
 4. **Verify logging**: Ensure CAPI2 logging is enabled (see above)
 
-### Performance Issues
+### Performance Issues & Terminal Crashes
+
+**Problem**: Searching with broad wildcards can return hundreds of chains, causing terminal slowdown or crashes.
+
+```powershell
+# ❌ BAD - Too broad, may return 200+ chains and crash terminal
+Find-CapiEventsByName -Name "*" -Hours 24
+
+# ✅ GOOD - Specific search term
+Find-CapiEventsByName -Name "*microsoft.com" -Hours 24
+
+# ✅ GOOD - Limit time range for broad searches
+Find-CapiEventsByName -Name "*" -Hours 0.1  # Just 6 minutes
+
+# ✅ GOOD - Process only what you need
+Find-CapiEventsByName -Name "*" -Hours 1 | Select-Object -First 5
+```
+
+**Best Practices**:
+- 🎯 **Use specific search terms** instead of `Name "*"` when possible
+- ⏱️ **Limit time ranges** for broad searches (use `-Hours 1` instead of `-Hours 24`)
+- 📊 **Limit results early** with `Select-Object -First N` to process fewer chains
+- 🔍 **Use FilterType** to reduce results: `-FilterType ErrorsOnly` instead of retrieving everything
+
+**Safe Usage Patterns**:
+```powershell
+# Export specific errors only
+Find-CapiEventsByName -Name "*company.com" -FilterType ErrorsOnly | 
+    Select-Object -First 10 |
+    ForEach-Object { Export-CapiEvents -Events $_.Events -Path "C:\Reports" -TaskID $_.TaskID }
+
+# Quick error check without overwhelming output
+Find-CapiEventsByName -Name "*" -Hours 1 -FilterType ErrorsOnly | Measure-Object
+```
 
 For large event logs:
 
