@@ -216,7 +216,7 @@ function Get-TrustStatusDetails {
     }
     
     # Parse ErrorStatus
-    $ErrorStatusNode = $TrustStatusNode.SelectSingleNode("ErrorStatus[@value]")
+    $ErrorStatusNode = $TrustStatusNode.SelectSingleNode("*[local-name()='ErrorStatus' and @value]")
     if ($ErrorStatusNode) {
         $ErrorValue = $ErrorStatusNode.GetAttribute('value')
         
@@ -259,7 +259,7 @@ function Get-TrustStatusDetails {
     }
     
     # Parse InfoStatus
-    $InfoStatusNode = $TrustStatusNode.SelectSingleNode("InfoStatus[@value]")
+    $InfoStatusNode = $TrustStatusNode.SelectSingleNode("*[local-name()='InfoStatus' and @value]")
     if ($InfoStatusNode) {
         $InfoValue = $InfoStatusNode.GetAttribute('value')
         
@@ -1201,7 +1201,7 @@ function Get-CapiErrorAnalysis {
                     
                     # Parse TrustStatus information (chain-level and per-certificate)
                     $TrustStatusInfo = $null
-                    $ChainTrustStatus = $EventXml.SelectSingleNode("//CertificateChain/TrustStatus")
+                    $ChainTrustStatus = $EventXml.SelectSingleNode("//*[local-name()='CertificateChain']/*[local-name()='TrustStatus']")
                     if ($ChainTrustStatus) {
                         $TrustStatusInfo = Get-TrustStatusDetails -TrustStatusNode $ChainTrustStatus
                     }
