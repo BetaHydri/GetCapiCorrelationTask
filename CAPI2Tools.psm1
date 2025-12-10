@@ -1272,28 +1272,82 @@ function Get-EventChainSummary {
         [array]$Events
     )
     
+    # Mapping of Event IDs to Task Categories based on CAPI2 documentation
+    $TaskCategoryMap = @{
+        11 = "Build Chain"
+        30 = "Verify Chain Policy"
+        70 = "Verify Revocation"
+        90 = "X509 Objects"
+        10 = "Verify Trust"
+        14 = "Certificate Details"
+        40 = "Private Key"
+        50 = "CRL Retrieval"
+        80 = "CTL Operations"
+    }
+    
+    # Level mapping
+    $LevelMap = @{
+        0 = "LogAlways"
+        1 = "Critical"
+        2 = "Error"
+        3 = "Warning"
+        4 = "Information"
+        5 = "Verbose"
+    }
+    
     $ChainSummary = @()
     
     foreach ($Event in $Events) {
-        # Extract sequence number from AuxInfo
+        # Extract sequence number from CorrelationAuxInfo
         $SequenceNum = $null
         try {
             [xml]$EventXml = $Event.DetailedMessage
-            $AuxInfoNode = $EventXml.SelectSingleNode("//EventAuxInfo[@SequenceNumber]")
-            if ($AuxInfoNode) {
-                $SequenceNum = [int]$AuxInfoNode.SequenceNumber
+            
+            # Try CorrelationAuxInfo/@SeqNumber (most common, namespace-aware)
+            $AuxInfoNode = $EventXml.GetElementsByTagName("CorrelationAuxInfo") | Select-Object -First 1
+            if ($AuxInfoNode -and $AuxInfoNode.SeqNumber) {
+                $SequenceNum = [int]$AuxInfoNode.SeqNumber
+            }
+            else {
+                # Fallback to EventAuxInfo/@SequenceNumber
+                $AuxInfoNode = $EventXml.GetElementsByTagName("EventAuxInfo") | Select-Object -First 1
+                if ($AuxInfoNode -and $AuxInfoNode.SequenceNumber) {
+                    $SequenceNum = [int]$AuxInfoNode.SequenceNumber
+                }
             }
         }
         catch {
             Write-Verbose "Could not parse sequence number for event ID $($Event.Id)"
         }
         
+        # Get Level display name
+        $LevelDisplay = if ($Event.LevelDisplayName) {
+            $Event.LevelDisplayName
+        }
+        elseif ($null -ne $Event.Level -and $Event.Level -ne "") {
+            $LevelMap[[int]$Event.Level]
+        }
+        else {
+            "Information"
+        }
+        
+        # Get Task Category
+        $TaskDisplay = if ($Event.TaskDisplayName) {
+            $Event.TaskDisplayName
+        }
+        elseif ($TaskCategoryMap.ContainsKey($Event.Id)) {
+            $TaskCategoryMap[$Event.Id]
+        }
+        else {
+            "Event $($Event.Id)"
+        }
+        
         $ChainSummary += [PSCustomObject]@{
             Sequence     = $SequenceNum
             TimeCreated  = $Event.TimeCreated
-            Level        = $Event.LevelDisplayName
+            Level        = $LevelDisplay
             EventID      = $Event.Id
-            TaskCategory = $Event.TaskDisplayName
+            TaskCategory = $TaskDisplay
         }
     }
     

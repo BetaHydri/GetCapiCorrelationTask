@@ -1,18 +1,18 @@
 <#
 .SYNOPSIS
-    Pester tests for CAPI2Tools PowerShell module (Compatible with Pester v3+)
+    Pester tests for CAPI2Tools PowerShell module (Pester 5.x compatible)
     
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
-    Updated for v2.10.1 to include tests for FilterType parameter with ValidateSet.
+    Updated for v2.11.0 to include tests for ShowEventChain feature and Pester 5 syntax.
     
 .NOTES
-    Version:        1.4
+    Version:        2.0
     Author:         Jan Tiedemann
     Creation Date:  December 2025
-    Last Updated:   December 2025 (v2.10.1 FilterType tests added)
-    Pester Version: 3.x compatible
+    Last Updated:   December 2025 (v2.11.0 - Pester 5 syntax migration)
+    Pester Version: 5.x+ required
     
 .EXAMPLE
     Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1
@@ -27,47 +27,47 @@ Describe "CAPI2Tools Module" {
     Context "Module Import and Structure" {
         
         It "Should import the module successfully" {
-            Get-Module CAPI2Tools | Should Not BeNullOrEmpty
+            Get-Module CAPI2Tools | Should -Not -BeNullOrEmpty
         }
         
         It "Should have the correct module version" {
             $Module = Get-Module CAPI2Tools
-            $Module.Version | Should Not BeNullOrEmpty
+            $Module.Version | Should -Not -BeNullOrEmpty
         }
         
         It "Should export Find-CapiEventsByName function" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Find-CapiEventsByName' | Should Be $true
+            $ExportedCommands -contains 'Find-CapiEventsByName' | Should -Be $true
         }
         
         It "Should export Get-CapiTaskIDEvents function" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Get-CapiTaskIDEvents' | Should Be $true
+            $ExportedCommands -contains 'Get-CapiTaskIDEvents' | Should -Be $true
         }
         
         It "Should export Enable-CAPI2EventLog function" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Enable-CAPI2EventLog' | Should Be $true
+            $ExportedCommands -contains 'Enable-CAPI2EventLog' | Should -Be $true
         }
         
         It "Should export Get-CapiErrorAnalysis function" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Get-CapiErrorAnalysis' | Should Be $true
+            $ExportedCommands -contains 'Get-CapiErrorAnalysis' | Should -Be $true
         }
         
         It "Should export Export-CapiEvents function" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Export-CapiEvents' | Should Be $true
+            $ExportedCommands -contains 'Export-CapiEvents' | Should -Be $true
         }
         
         It "Should export Get-CapiCertificateReport function (v2.6 simplified workflow)" {
             $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
-            $ExportedCommands -contains 'Get-CapiCertificateReport' | Should Be $true
+            $ExportedCommands -contains 'Get-CapiCertificateReport' | Should -Be $true
         }
         
         It "Should export Find-CertEvents alias" {
             $ExportedAliases = (Get-Module CAPI2Tools).ExportedAliases.Keys
-            $ExportedAliases -contains 'Find-CertEvents' | Should Be $true
+            $ExportedAliases -contains 'Find-CertEvents' | Should -Be $true
         }
     }
     
@@ -75,39 +75,39 @@ Describe "CAPI2Tools Module" {
         
         It "Should return error details for known error code (0x80092013)" {
             $Result = Get-CAPI2ErrorDetails -ErrorCode '0x80092013'
-            $Result | Should Not BeNullOrEmpty
-            $Result.HexCode | Should Be 'CRYPT_E_REVOCATION_OFFLINE'
-            $Result.Severity | Should Be 'Warning'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result.HexCode | Should -Be 'CRYPT_E_REVOCATION_OFFLINE'
+            $Result.Severity | Should -Be 'Warning'
         }
         
         It "Should return error details for CERT_E_EXPIRED" {
             $Result = Get-CAPI2ErrorDetails -ErrorCode '0x800B0101'
-            $Result | Should Not BeNullOrEmpty
-            $Result.HexCode | Should Be 'CERT_E_EXPIRED'
-            $Result.Description | Should Match 'validity period'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result.HexCode | Should -Be 'CERT_E_EXPIRED'
+            $Result.Description | Should -Match 'validity period'
         }
         
         It "Should handle FBF error code" {
             $Result = Get-CAPI2ErrorDetails -ErrorCode 'FBF'
-            $Result | Should Not BeNullOrEmpty
-            $Result.HexCode | Should Be 'CERT_E_CHAINING'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result.HexCode | Should -Be 'CERT_E_CHAINING'
         }
         
         It "Should return UNKNOWN for unrecognized error codes" {
             $Result = Get-CAPI2ErrorDetails -ErrorCode '0xDEADBEEF'
-            $Result | Should Not BeNullOrEmpty
-            $Result.HexCode | Should Be 'UNKNOWN'
-            $Result.Description | Should Match 'Unknown'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result.HexCode | Should -Be 'UNKNOWN'
+            $Result.Description | Should -Match 'Unknown'
         }
         
         It "Should include all required error detail properties" {
             $Result = Get-CAPI2ErrorDetails -ErrorCode '0x80092013'
-            $Result.Code | Should Not BeNullOrEmpty
-            $Result.HexCode | Should Not BeNullOrEmpty
-            $Result.Description | Should Not BeNullOrEmpty
-            $Result.CommonCause | Should Not BeNullOrEmpty
-            $Result.Resolution | Should Not BeNullOrEmpty
-            $Result.Severity | Should Not BeNullOrEmpty
+            $Result.Code | Should -Not -BeNullOrEmpty
+            $Result.HexCode | Should -Not -BeNullOrEmpty
+            $Result.Description | Should -Not -BeNullOrEmpty
+            $Result.CommonCause | Should -Not -BeNullOrEmpty
+            $Result.Resolution | Should -Not -BeNullOrEmpty
+            $Result.Severity | Should -Not -BeNullOrEmpty
         }
     }
     
@@ -118,36 +118,38 @@ Describe "CAPI2Tools Module" {
         
         It "Should have Get-DisplayChar function defined in module" {
             $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Get-DisplayChar -ErrorAction SilentlyContinue })
-            $ModuleFunctions | Should Not BeNullOrEmpty
+            $ModuleFunctions | Should -Not -BeNullOrEmpty
         }
         
         It "Should have Write-BoxHeader function defined in module" {
             $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Write-BoxHeader -ErrorAction SilentlyContinue })
-            $ModuleFunctions | Should Not BeNullOrEmpty
+            $ModuleFunctions | Should -Not -BeNullOrEmpty
         }
     }
     
     Context "Export-CapiEvents Function" {
         
-        # Create mock event data once for all tests
-        $script:MockEvents = @(
-            [PSCustomObject]@{
-                TimeCreated     = Get-Date
-                ID              = 11
-                RecordType      = 'Information'
-                DetailedMessage = '<CertGetCertificateChain xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate subjectName="CN=test.com" /></CertGetCertificateChain>'
-            }
-        )
-        
-        $script:TestExportPath = Join-Path $env:TEMP "CAPI2_Test_Export_$(Get-Date -Format 'yyyyMMddHHmmss')"
+        BeforeAll {
+            # Create mock event data once for all tests
+            $script:MockEvents = @(
+                [PSCustomObject]@{
+                    TimeCreated     = Get-Date
+                    ID              = 11
+                    RecordType      = 'Information'
+                    DetailedMessage = '<CertGetCertificateChain xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><Certificate subjectName="CN=test.com" /></CertGetCertificateChain>'
+                }
+            )
+            
+            $script:TestExportPath = Join-Path $env:TEMP "CAPI2_Test_Export_$(Get-Date -Format 'yyyyMMddHHmmss')"
+        }
         
         It "Should export to CSV format" {
             $CsvPath = "$script:TestExportPath.csv"
             Export-CapiEvents -Events $script:MockEvents -Path $CsvPath -Format CSV
             
-            Test-Path $CsvPath | Should Be $true
+            Test-Path $CsvPath | Should -Be $true
             $CsvContent = @(Import-Csv $CsvPath)
-            $CsvContent.Count | Should BeGreaterThan 0
+            $CsvContent.Count | Should -BeGreaterThan 0
             
             Remove-Item $CsvPath -Force -ErrorAction SilentlyContinue
         }
@@ -156,9 +158,9 @@ Describe "CAPI2Tools Module" {
             $JsonPath = "$script:TestExportPath.json"
             Export-CapiEvents -Events $script:MockEvents -Path $JsonPath -Format JSON
             
-            Test-Path $JsonPath | Should Be $true
+            Test-Path $JsonPath | Should -Be $true
             $JsonContent = Get-Content $JsonPath -Raw | ConvertFrom-Json
-            $JsonContent.Events | Should Not BeNullOrEmpty
+            $JsonContent.Events | Should -Not -BeNullOrEmpty
             
             Remove-Item $JsonPath -Force -ErrorAction SilentlyContinue
         }
@@ -167,10 +169,10 @@ Describe "CAPI2Tools Module" {
             $HtmlPath = "$script:TestExportPath.html"
             Export-CapiEvents -Events $script:MockEvents -Path $HtmlPath -Format HTML
             
-            Test-Path $HtmlPath | Should Be $true
+            Test-Path $HtmlPath | Should -Be $true
             $HtmlContent = Get-Content $HtmlPath -Raw
-            $HtmlContent | Should Match '<html>'
-            $HtmlContent | Should Match 'CAPI2'
+            $HtmlContent | Should -Match '<html>'
+            $HtmlContent | Should -Match 'CAPI2'
             
             Remove-Item $HtmlPath -Force -ErrorAction SilentlyContinue
         }
@@ -180,8 +182,8 @@ Describe "CAPI2Tools Module" {
             Export-CapiEvents -Events $script:MockEvents -Path $HtmlPath -Format HTML
             
             $HtmlContent = Get-Content $HtmlPath -Raw
-            $HtmlContent | Should Match 'cert-name'
-            $HtmlContent | Should Match 'Certificate:'
+            $HtmlContent | Should -Match 'cert-name'
+            $HtmlContent | Should -Match 'Certificate:'
             
             Remove-Item $HtmlPath -Force -ErrorAction SilentlyContinue
         }
@@ -191,7 +193,7 @@ Describe "CAPI2Tools Module" {
         
         It "Should accept Events parameter" {
             $Function = Get-Command Get-CapiErrorAnalysis
-            $Function.Parameters.ContainsKey('Events') | Should Be $true
+            $Function.Parameters.ContainsKey('Events') | Should -Be $true
         }
         
         It "Should return null for events with no errors" {
@@ -204,7 +206,7 @@ Describe "CAPI2Tools Module" {
             )
             
             $Result = Get-CapiErrorAnalysis -Events $MockGoodEvents
-            $Result | Should BeNullOrEmpty
+            $Result | Should -BeNullOrEmpty
         }
         
         It "Should not treat Event ID 30 Flags as error codes (bug fix regression test)" {
@@ -221,7 +223,7 @@ Describe "CAPI2Tools Module" {
             $Result = Get-CapiErrorAnalysis -Events $MockEvent30
             # Should return null because Result value="0" is success
             # Should NOT return UNKNOWN error for Flags value="F00"
-            $Result | Should BeNullOrEmpty
+            $Result | Should -BeNullOrEmpty
         }
         
         It "Should detect actual errors in Event ID 30 Result nodes" {
@@ -236,9 +238,9 @@ Describe "CAPI2Tools Module" {
             
             $Result = Get-CapiErrorAnalysis -Events $MockEvent30Error 2>&1 | Where-Object { $_ -is [PSCustomObject] -and $_.PSObject.Properties['ErrorCode'] }
             # Should detect the actual error code in Result node
-            $Result | Should Not BeNullOrEmpty
-            $Result[0].ErrorCode | Should Be '0x800B0101'
-            $Result[0].ErrorName | Should Be 'CERT_E_EXPIRED'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result[0].ErrorCode | Should -Be '0x800B0101'
+            $Result[0].ErrorName | Should -Be 'CERT_E_EXPIRED'
         }
     }
     
@@ -248,9 +250,9 @@ Describe "CAPI2Tools Module" {
             [xml]$TestXml = '<root><child>value</child></root>'
             $Result = Format-XML -Xml $TestXml
             
-            $Result | Should Not BeNullOrEmpty
-            $Result | Should Match 'root'
-            $Result | Should Match 'child'
+            $Result | Should -Not -BeNullOrEmpty
+            $Result | Should -Match 'root'
+            $Result | Should -Match 'child'
         }
     }
     
@@ -258,34 +260,34 @@ Describe "CAPI2Tools Module" {
         
         It "Should have Name parameter" {
             $Function = Get-Command Find-CapiEventsByName
-            $Function.Parameters.ContainsKey('Name') | Should Be $true
+            $Function.Parameters.ContainsKey('Name') | Should -Be $true
         }
         
         It "Should have MaxEvents parameter" {
             $Function = Get-Command Find-CapiEventsByName
-            $Function.Parameters.ContainsKey('MaxEvents') | Should Be $true
+            $Function.Parameters.ContainsKey('MaxEvents') | Should -Be $true
         }
         
         It "Should have Hours parameter" {
             $Function = Get-Command Find-CapiEventsByName
-            $Function.Parameters.ContainsKey('Hours') | Should Be $true
+            $Function.Parameters.ContainsKey('Hours') | Should -Be $true
         }
         
         It "Should have IncludePattern parameter" {
             $Function = Get-Command Find-CapiEventsByName
-            $Function.Parameters.ContainsKey('IncludePattern') | Should Be $true
+            $Function.Parameters.ContainsKey('IncludePattern') | Should -Be $true
         }
         
         It "Should have FilterType parameter (v2.10.1 feature)" {
             $Function = Get-Command Find-CapiEventsByName
-            $Function.Parameters.ContainsKey('FilterType') | Should Be $true
+            $Function.Parameters.ContainsKey('FilterType') | Should -Be $true
         }
         
         It "Should have ValidateSet for FilterType parameter" {
             $Function = Get-Command Find-CapiEventsByName
             $FilterTypeParam = $Function.Parameters['FilterType']
             $ValidateSet = $FilterTypeParam.Attributes | Where-Object { $_.TypeId.Name -eq 'ValidateSetAttribute' }
-            $ValidateSet | Should Not BeNullOrEmpty
+            $ValidateSet | Should -Not -BeNullOrEmpty
         }
         
         It "Should have correct FilterType values" {
@@ -293,13 +295,13 @@ Describe "CAPI2Tools Module" {
             $FilterTypeParam = $Function.Parameters['FilterType']
             $ValidateSet = $FilterTypeParam.Attributes | Where-Object { $_.TypeId.Name -eq 'ValidateSetAttribute' }
             $ValidValues = $ValidateSet.ValidValues
-            $ValidValues -contains 'Revocation' | Should Be $true
-            $ValidValues -contains 'Expired' | Should Be $true
-            $ValidValues -contains 'Untrusted' | Should Be $true
-            $ValidValues -contains 'ChainBuilding' | Should Be $true
-            $ValidValues -contains 'PolicyValidation' | Should Be $true
-            $ValidValues -contains 'SignatureValidation' | Should Be $true
-            $ValidValues -contains 'ErrorsOnly' | Should Be $true
+            $ValidValues -contains 'Revocation' | Should -Be $true
+            $ValidValues -contains 'Expired' | Should -Be $true
+            $ValidValues -contains 'Untrusted' | Should -Be $true
+            $ValidValues -contains 'ChainBuilding' | Should -Be $true
+            $ValidValues -contains 'PolicyValidation' | Should -Be $true
+            $ValidValues -contains 'SignatureValidation' | Should -Be $true
+            $ValidValues -contains 'ErrorsOnly' | Should -Be $true
         }
         
         It "Should reject invalid FilterType values" {
@@ -311,7 +313,7 @@ Describe "CAPI2Tools Module" {
             catch {
                 $ThrowsError = $true
             }
-            $ThrowsError | Should Be $true
+            $ThrowsError | Should -Be $true
         }
         
         It "Should support enhanced multi-field search (v2.8 feature)" {
@@ -326,20 +328,20 @@ Describe "CAPI2Tools Module" {
             # The function should be able to parse XML and search multiple fields
             # This is a structural test - actual search functionality requires event log access
             $Function = Get-Command Find-CapiEventsByName
-            $Function | Should Not BeNullOrEmpty
+            $Function | Should -Not -BeNullOrEmpty
         }
         
         It "Should have updated help documentation mentioning SubjectAltName and ProcessName" {
             $Help = Get-Help Find-CapiEventsByName -Full
             $HelpText = $Help.Description.Text + $Help.examples.example.code -join ' '
             # Should mention at least one of the new search capabilities
-            ($HelpText -match 'SubjectAltName|ProcessName|CN|chrome\.exe|outlook\.exe') | Should Be $true
+            ($HelpText -match 'SubjectAltName|ProcessName|CN|chrome\.exe|outlook\.exe') | Should -Be $true
         }
         
         It "Should have help documentation for FilterType parameter" {
             $Help = Get-Help Find-CapiEventsByName -Parameter FilterType
-            $Help | Should Not BeNullOrEmpty
-            $Help.description.Text | Should Match 'Revocation|Expired|Untrusted'
+            $Help | Should -Not -BeNullOrEmpty
+            $Help.description.Text | Should -Match 'Revocation|Expired|Untrusted'
         }
     }
     
@@ -347,7 +349,7 @@ Describe "CAPI2Tools Module" {
         
         It "Should have TaskID parameter" {
             $Function = Get-Command Get-CapiTaskIDEvents
-            $Function.Parameters.ContainsKey('TaskID') | Should Be $true
+            $Function.Parameters.ContainsKey('TaskID') | Should -Be $true
         }
     }
     
@@ -355,27 +357,27 @@ Describe "CAPI2Tools Module" {
         
         It "Should have Name parameter" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('Name') | Should Be $true
+            $Function.Parameters.ContainsKey('Name') | Should -Be $true
         }
         
         It "Should have ExportPath parameter" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('ExportPath') | Should Be $true
+            $Function.Parameters.ContainsKey('ExportPath') | Should -Be $true
         }
         
         It "Should have Format parameter with ValidateSet (v2.9 feature)" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('Format') | Should Be $true
+            $Function.Parameters.ContainsKey('Format') | Should -Be $true
             
             # Check if it has ValidateSet attribute
             $ValidateSetAttr = $Function.Parameters['Format'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
-            $ValidateSetAttr | Should Not BeNullOrEmpty
+            $ValidateSetAttr | Should -Not -BeNullOrEmpty
             
             # Check valid values
-            $ValidateSetAttr.ValidValues -contains 'HTML' | Should Be $true
-            $ValidateSetAttr.ValidValues -contains 'JSON' | Should Be $true
-            $ValidateSetAttr.ValidValues -contains 'CSV' | Should Be $true
-            $ValidateSetAttr.ValidValues -contains 'XML' | Should Be $true
+            $ValidateSetAttr.ValidValues -contains 'HTML' | Should -Be $true
+            $ValidateSetAttr.ValidValues -contains 'JSON' | Should -Be $true
+            $ValidateSetAttr.ValidValues -contains 'CSV' | Should -Be $true
+            $ValidateSetAttr.ValidValues -contains 'XML' | Should -Be $true
         }
         
         It "Format parameter should default to HTML" {
@@ -383,42 +385,42 @@ Describe "CAPI2Tools Module" {
             $DefaultValue = $Function.Parameters['Format'].Attributes | Where-Object { $_.TypeId.Name -eq 'PSDefaultValueAttribute' }
             # Default is set in param block, check via Get-Help
             $Help = Get-Help Get-CapiCertificateReport -Parameter Format
-            $Help.defaultValue | Should Be 'HTML'
+            $Help.defaultValue | Should -Be 'HTML'
         }
         
         It "Should have Hours parameter with default value" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('Hours') | Should Be $true
+            $Function.Parameters.ContainsKey('Hours') | Should -Be $true
         }
         
         It "Should have ShowDetails switch parameter" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('ShowDetails') | Should Be $true
-            $Function.Parameters['ShowDetails'].SwitchParameter | Should Be $true
+            $Function.Parameters.ContainsKey('ShowDetails') | Should -Be $true
+            $Function.Parameters['ShowDetails'].SwitchParameter | Should -Be $true
         }
         
         It "Should have OpenReport switch parameter" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters.ContainsKey('OpenReport') | Should Be $true
-            $Function.Parameters['OpenReport'].SwitchParameter | Should Be $true
+            $Function.Parameters.ContainsKey('OpenReport') | Should -Be $true
+            $Function.Parameters['OpenReport'].SwitchParameter | Should -Be $true
         }
         
         It "ExportPath parameter help should indicate directory path (v2.9 change)" {
             $Help = Get-Help Get-CapiCertificateReport -Parameter ExportPath
-            $Help.description.Text | Should Match 'directory|Directory|folder'
+            $Help.description.Text | Should -Match 'directory|Directory|folder'
         }
         
         It "Should accept Name as positional parameter" {
             $Function = Get-Command Get-CapiCertificateReport
-            $Function.Parameters['Name'].Attributes.Position | Should Be 0
+            $Function.Parameters['Name'].Attributes.Position | Should -Be 0
         }
     }
     
     Context "Error Handling" {
         
-        It "Get-CAPI2ErrorDetails should not throw on invalid input" {
-            { Get-CAPI2ErrorDetails -ErrorCode 'InvalidCode123' } | Should Not Throw
-            { Get-CAPI2ErrorDetails -ErrorCode '0xFFFFFFFF' } | Should Not Throw
+        It "Get-CAPI2ErrorDetails Should -Not -Throw on invalid input" {
+            { Get-CAPI2ErrorDetails -ErrorCode 'InvalidCode123' } | Should -Not -Throw
+            { Get-CAPI2ErrorDetails -ErrorCode '0xFFFFFFFF' } | Should -Not -Throw
         }
     }
 }
@@ -439,9 +441,9 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             
             $TempPath = Join-Path $env:TEMP "integration_test_$(Get-Date -Format 'yyyyMMddHHmmss').csv"
             
-            { Export-CapiEvents -Events $MockEvents -Path $TempPath } | Should Not Throw
+            { Export-CapiEvents -Events $MockEvents -Path $TempPath } | Should -Not -Throw
             
-            Test-Path $TempPath | Should Be $true
+            Test-Path $TempPath | Should -Be $true
             
             Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
         }
@@ -456,16 +458,16 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
                 }
             )
             
-            { Get-CapiErrorAnalysis -Events $MockErrorEvents } | Should Not Throw
+            { Get-CapiErrorAnalysis -Events $MockErrorEvents } | Should -Not -Throw
         }
     }
     
     Context "Multi-File Export Tests (v2.9 Get-CapiCertificateReport)" {
         
-        It "Should not throw when no events are found" {
+        It "Should -Not -Throw when no events are found" {
             # This simulates the scenario where certificate name doesn't exist in logs
-            # Use Hours 0.01 (36 seconds) to speed up the test
-            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            # Use Hours 1 (minimum allowed)
+            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
         }
         
         It "Should create export directory if it doesn't exist (v2.9 feature)" {
@@ -477,14 +479,14 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             }
             
             # Directory should not exist before call
-            Test-Path $TempDir | Should Be $false
+            Test-Path $TempDir | Should -Be $false
             
             # Call with ExportPath - should create directory even if no events found
             Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -Hours 1 -ErrorAction SilentlyContinue
             
             # Directory should now exist (created by the function)
-            Test-Path $TempDir | Should Be $true
-            Test-Path $TempDir -PathType Container | Should Be $true
+            Test-Path $TempDir | Should -Be $true
+            Test-Path $TempDir -PathType Container | Should -Be $true
             
             # Clean up
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -497,11 +499,11 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             "test" | Out-File -FilePath $TempFile -Force
             
             # Verify it's a file
-            Test-Path $TempFile -PathType Leaf | Should Be $true
+            Test-Path $TempFile -PathType Leaf | Should -Be $true
             
             # Should write error when ExportPath is a file (use ErrorAction Continue to capture error in stream)
             $ErrorOutput = Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction Continue 2>&1
-            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
+            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should -Not -BeNullOrEmpty
             
             # Clean up
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -510,7 +512,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with HTML value" {
             $TempDir = Join-Path $env:TEMP "cert_html_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -520,7 +522,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with JSON value" {
             $TempDir = Join-Path $env:TEMP "cert_json_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -530,7 +532,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with CSV value" {
             $TempDir = Join-Path $env:TEMP "cert_csv_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -540,7 +542,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with XML value" {
             $TempDir = Join-Path $env:TEMP "cert_xml_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -558,7 +560,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             catch {
                 $ThrowsError = $true
             }
-            $ThrowsError | Should Be $true
+            $ThrowsError | Should -Be $true
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -566,17 +568,17 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
         
         It "Should accept Hours parameter" {
-            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
         }
         
         It "Should accept ShowDetails switch" {
-            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -Hours 1 -ErrorAction SilentlyContinue } | Should -Not -Throw
         }
         
         It "Should accept all parameters together" {
             $TempDir = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 1 -ShowDetails -Hours 0.01 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 1 -ShowDetails -ErrorAction SilentlyContinue } | Should -Not -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -595,8 +597,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             Get-CapiCertificateReport -Name "test-autocreate.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue | Out-Null
             
             # Directory should now exist (even if no events were found)
-            Test-Path $TempDir | Should Be $true
-            (Get-Item $TempDir).PSIsContainer | Should Be $true
+            Test-Path $TempDir | Should -Be $true
+            (Get-Item $TempDir).PSIsContainer | Should -Be $true
             
             # Cleanup
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -610,7 +612,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             
             # Should write error when ExportPath is a file (use ErrorAction Continue to capture error in stream)
             $ErrorOutput = Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction Continue 2>&1
-            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
+            $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should -Not -BeNullOrEmpty
             
             # Cleanup
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -625,7 +627,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             catch {
                 $ThrowsError = $true
             }
-            $ThrowsError | Should Be $true
+            $ThrowsError | Should -Be $true
         }
     }
 }
