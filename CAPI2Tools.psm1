@@ -1182,7 +1182,8 @@ Compare-CapiEvents -ReferenceEvents <dollarsign>Before -DifferenceEvents <dollar
 Get-CAPI2EventLogStatus</pre>
 </div>
 "@
-                        } else {
+                        }
+                        else {
                             $HtmlReport += @"
 <h2>✅ Validation Status</h2>
 <div class='info' style='background: #e7ffe7; border-left-color: #107c10;'>
