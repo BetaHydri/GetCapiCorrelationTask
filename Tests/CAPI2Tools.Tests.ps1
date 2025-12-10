@@ -58,6 +58,11 @@ Describe "CAPI2Tools Module" {
             $ExportedCommands -contains 'Export-CapiEvents' | Should Be $true
         }
         
+        It "Should export Get-CapiCertificateReport function (v2.6 simplified workflow)" {
+            $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
+            $ExportedCommands -contains 'Get-CapiCertificateReport' | Should Be $true
+        }
+        
         It "Should export Find-CertEvents alias" {
             $ExportedAliases = (Get-Module CAPI2Tools).ExportedAliases.Keys
             $ExportedAliases -contains 'Find-CertEvents' | Should Be $true
@@ -236,6 +241,47 @@ Describe "CAPI2Tools Module" {
         It "Should have TaskID parameter" {
             $Function = Get-Command Get-CapiTaskIDEvents
             $Function.Parameters.ContainsKey('TaskID') | Should Be $true
+        }
+    }
+    
+    Context "Get-CapiCertificateReport Function (v2.6 Simplified Workflow)" {
+        
+        It "Should have Name parameter" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('Name') | Should Be $true
+        }
+        
+        It "Should have ExportPath parameter" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('ExportPath') | Should Be $true
+        }
+        
+        It "Should have Hours parameter with default value" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('Hours') | Should Be $true
+        }
+        
+        It "Should have ShowDetails switch parameter" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('ShowDetails') | Should Be $true
+            $Function.Parameters['ShowDetails'].SwitchParameter | Should Be $true
+        }
+        
+        It "Should have OpenReport switch parameter" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('OpenReport') | Should Be $true
+            $Function.Parameters['OpenReport'].SwitchParameter | Should Be $true
+        }
+        
+        It "ExportPath parameter help should clearly indicate filename requirement" {
+            $Help = Get-Help Get-CapiCertificateReport -Parameter ExportPath
+            $Help.description.Text | Should Match 'filename'
+            $Help.description.Text | Should Match 'extension'
+        }
+        
+        It "Should accept Name as positional parameter" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters['Name'].Attributes.Position | Should Be 0
         }
     }
     

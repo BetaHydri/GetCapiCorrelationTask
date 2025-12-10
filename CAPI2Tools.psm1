@@ -8,7 +8,7 @@
     
 .NOTES
     Module Name:    CAPI2Tools
-    Version:        2.5.0
+    Version:        2.6.0
     Author:         Jan Tiedemann
     Copyright:      (c) 2022-2025 Jan Tiedemann. Licensed under GNU GPL v3.
     
@@ -1344,7 +1344,9 @@ function Get-CapiCertificateReport {
         DNS name, certificate subject, or issuer to search for (supports wildcards)
         
     .PARAMETER ExportPath
-        Optional path to export the report. Format is auto-detected from file extension (.html, .json, .csv, .xml)
+        Optional full file path including filename and extension for the report.
+        Format is auto-detected from extension: .html, .json, .csv, or .xml
+        Example: "C:\Reports\certificate_report.html" or "./report.json"
         If not specified, results are displayed on console only
         
     .PARAMETER Hours

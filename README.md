@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.5-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.6-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,13 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.5** introduces comprehensive error analysis, event log management, export capabilities, and comparison features.
+**Version 2.6** introduces a simplified one-command workflow with `Get-CapiCertificateReport` alongside comprehensive error analysis, event log management, export capabilities, and comparison features.
+
+### What's New in v2.6
+
+- ⭐ **Simplified Workflow**: New `Get-CapiCertificateReport` function - one command does everything!
+- 📝 **Enhanced Documentation**: Clear parameter descriptions and comprehensive examples
+- 🎯 **Improved UX**: Reduced complexity from 3+ commands to 1 command
 
 ### What's New in v2.5
 
@@ -795,6 +801,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.6 | December 2025 | Added `Get-CapiCertificateReport` simplified one-command workflow function, improved parameter documentation for ExportPath (now clearly requires filename with extension), enhanced user experience |
 | 2.5 | December 2025 | Added error analysis tables, CAPI2 log management, export functionality (CSV/JSON/HTML/XML), comparison features, error code dictionary |
 | 2.0 | December 2025 | Added DNS/certificate name search, enhanced UI, improved documentation |
 | 1.0 | 2022 | Initial release with TaskID-based correlation |

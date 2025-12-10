@@ -3,7 +3,7 @@
     RootModule = 'CAPI2Tools.psm1'
     
     # Version number of this module.
-    ModuleVersion = '2.5.0'
+    ModuleVersion = '2.6.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -26,6 +26,7 @@ CAPI2 Event Log Correlation Analysis Toolkit - A comprehensive PowerShell module
 certificate validation chains, troubleshooting TLS/SSL connections, and diagnosing CAPI2 cryptographic errors.
 
 Features:
+- Simplified one-command workflow with Get-CapiCertificateReport (NEW in v2.6)
 - Automatic certificate chain discovery by DNS/certificate name
 - Intelligent error analysis with human-readable descriptions
 - Event log management (enable, disable, clear, status)
@@ -39,6 +40,9 @@ Features:
     
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     FunctionsToExport = @(
+        # Simplified Workflow (Recommended)
+        'Get-CapiCertificateReport',
+        
         # Search and Retrieval
         'Find-CapiEventsByName',
         'Get-CapiTaskIDEvents',
