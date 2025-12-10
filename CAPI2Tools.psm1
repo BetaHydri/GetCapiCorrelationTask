@@ -226,7 +226,8 @@ function Get-TrustStatusDetails {
             # Convert to integer for bit manipulation
             $ErrorInt = if ($ErrorValue -match '^0x') {
                 [Convert]::ToInt64($ErrorValue, 16)
-            } else {
+            }
+            else {
                 [int64]$ErrorValue
             }
             
@@ -265,7 +266,8 @@ function Get-TrustStatusDetails {
         # Convert to integer for bit manipulation
         $InfoInt = if ($InfoValue -match '^0x') {
             [Convert]::ToInt64($InfoValue, 16)
-        } else {
+        }
+        else {
             [int64]$InfoValue
         }
         
@@ -1206,18 +1208,18 @@ function Get-CapiErrorAnalysis {
                     
                     # Create error entry
                     $ErrorEntry = [PSCustomObject]@{
-                        TimeCreated      = $CurrentEvent.TimeCreated
-                        EventID          = $CurrentEvent.ID
-                        Severity         = $ErrorDetails.Severity
-                        ErrorCode        = $ErrorDetails.Code
-                        ErrorName        = $ErrorDetails.HexCode
-                        Description      = $ErrorDetails.Description
-                        Certificate      = $CertSubject
-                        Issuer           = $CertIssuer
-                        Process          = $ProcessName
-                        CommonCause      = $ErrorDetails.CommonCause
-                        Resolution       = $ErrorDetails.Resolution
-                        TrustStatus      = $TrustStatusInfo
+                        TimeCreated = $CurrentEvent.TimeCreated
+                        EventID     = $CurrentEvent.ID
+                        Severity    = $ErrorDetails.Severity
+                        ErrorCode   = $ErrorDetails.Code
+                        ErrorName   = $ErrorDetails.HexCode
+                        Description = $ErrorDetails.Description
+                        Certificate = $CertSubject
+                        Issuer      = $CertIssuer
+                        Process     = $ProcessName
+                        CommonCause = $ErrorDetails.CommonCause
+                        Resolution  = $ErrorDetails.Resolution
+                        TrustStatus = $TrustStatusInfo
                     }
                     
                     $ErrorTable += $ErrorEntry
