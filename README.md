@@ -1322,6 +1322,29 @@ Common CAPI2 error codes with explanations:
 
 ## 🔍 Troubleshooting
 
+### "For more details... refer to the Details section" Message
+
+When you see this message in the output:
+```
+TaskID: 99FC26C2... - For more details for this event, please refer to the "Details" section...
+```
+
+**This is just standard Windows Event Log text** - not actionable advice! Here's what it means:
+
+- 📝 **Old Method** (manual): Open Event Viewer → CAPI2 log → Click event → Details tab → XML view
+- ✅ **Our Tool** (automatic): `Get-CapiErrorAnalysis` extracts all that XML data for you!
+
+**You don't need to check Event Viewer!** The error analysis output shows everything:
+```powershell
+# This command automatically shows all the "details"
+Find-CapiEventsByName -Name "site.com" | Get-CapiErrorAnalysis -IncludeSummary
+
+# Or export to HTML for formatted report
+Get-CapiCertificateReport -Name "site.com" -ExportPath "C:\Reports"
+```
+
+If you see "✓ No errors found" instead of error details, the chain completed successfully without certificate validation errors.
+
 ### CAPI2 Logging Not Enabled
 
 If you see no events, CAPI2 logging may be disabled:
