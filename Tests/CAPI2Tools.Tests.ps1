@@ -5,11 +5,13 @@
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
+    Updated for v2.6 to include tests for Get-CapiCertificateReport simplified workflow.
     
 .NOTES
-    Version:        1.0
+    Version:        1.1
     Author:         Jan Tiedemann
     Creation Date:  December 2025
+    Last Updated:   December 2025 (v2.6 tests added)
     Pester Version: 3.x compatible
     
 .EXAMPLE
@@ -328,6 +330,74 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             )
             
             { Get-CapiErrorAnalysis -Events $MockErrorEvents } | Should Not Throw
+        }
+    }
+    
+    Context "Simplified Workflow Tests (v2.6 Get-CapiCertificateReport)" {
+        
+        It "Should not throw when no events are found" {
+            # This simulates the scenario where certificate name doesn't exist in logs
+            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" } | Should Not Throw
+        }
+        
+        It "Should accept ExportPath with .html extension" {
+            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').html"
+            
+            # This will search but likely find nothing - we're testing the parameter handling
+            { Get-CapiCertificateReport -Name "test-html-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            # Clean up if file was created
+            if (Test-Path $TempPath) {
+                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should accept ExportPath with .json extension" {
+            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').json"
+            
+            { Get-CapiCertificateReport -Name "test-json-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempPath) {
+                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should accept ExportPath with .csv extension" {
+            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').csv"
+            
+            { Get-CapiCertificateReport -Name "test-csv-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempPath) {
+                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should accept ExportPath with .xml extension" {
+            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').xml"
+            
+            { Get-CapiCertificateReport -Name "test-xml-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempPath) {
+                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should accept Hours parameter" {
+            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 48 -ErrorAction SilentlyContinue } | Should Not Throw
+        }
+        
+        It "Should accept ShowDetails switch" {
+            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
+        }
+        
+        It "Should accept all parameters together" {
+            $TempPath = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss').html"
+            
+            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempPath -Hours 24 -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempPath) {
+                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 }

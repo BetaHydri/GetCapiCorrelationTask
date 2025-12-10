@@ -1,27 +1,27 @@
 @{
     # Script module or binary module file associated with this manifest.
-    RootModule = 'CAPI2Tools.psm1'
+    RootModule           = 'CAPI2Tools.psm1'
     
     # Version number of this module.
-    ModuleVersion = '2.6.0'
+    ModuleVersion        = '2.6.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
     
     # ID used to uniquely identify this module
-    GUID = '3228f1cd-8cca-4839-b9aa-7c93c83a917e'
+    GUID                 = '3228f1cd-8cca-4839-b9aa-7c93c83a917e'
     
     # Author of this module
-    Author = 'Jan Tiedemann'
+    Author               = 'Jan Tiedemann'
     
     # Company or vendor of this module
-    CompanyName = 'Jan Tiedemann'
+    CompanyName          = 'Jan Tiedemann'
     
     # Copyright statement for this module
-    Copyright = '(c) 2022-2025 Jan Tiedemann. All rights reserved. Licensed under GNU GPL v3.'
+    Copyright            = '(c) 2022-2025 Jan Tiedemann. All rights reserved. Licensed under GNU GPL v3.'
     
     # Description of the functionality provided by this module
-    Description = @'
+    Description          = @'
 CAPI2 Event Log Correlation Analysis Toolkit - A comprehensive PowerShell module for analyzing Windows 
 certificate validation chains, troubleshooting TLS/SSL connections, and diagnosing CAPI2 cryptographic errors.
 
@@ -36,10 +36,10 @@ Features:
 '@
     
     # Minimum version of the PowerShell engine required by this module
-    PowerShellVersion = '5.1'
+    PowerShellVersion    = '5.1'
     
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-    FunctionsToExport = @(
+    FunctionsToExport    = @(
         # Simplified Workflow (Recommended)
         'Get-CapiCertificateReport',
         
@@ -68,13 +68,13 @@ Features:
     )
     
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-    CmdletsToExport = @()
+    CmdletsToExport      = @()
     
     # Variables to export from this module
-    VariablesToExport = @()
+    VariablesToExport    = @()
     
     # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
-    AliasesToExport = @(
+    AliasesToExport      = @(
         'Find-CertEvents',
         'Get-CertChain',
         'Enable-CapiLog',
@@ -83,16 +83,16 @@ Features:
     )
     
     # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
-    PrivateData = @{
+    PrivateData          = @{
         PSData = @{
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @('CAPI2', 'Certificate', 'TLS', 'SSL', 'Troubleshooting', 'PKI', 'EventLog', 'Security', 'Windows')
+            Tags         = @('CAPI2', 'Certificate', 'TLS', 'SSL', 'Troubleshooting', 'PKI', 'EventLog', 'Security', 'Windows')
             
             # A URL to the license for this module.
-            LicenseUri = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+            LicenseUri   = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
             
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/BetaHydri/GetCapiCorrelationTask'
+            ProjectUri   = 'https://github.com/BetaHydri/GetCapiCorrelationTask'
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
@@ -134,5 +134,5 @@ Features:
     }
     
     # HelpInfo URI of this module
-    HelpInfoURI = 'https://github.com/BetaHydri/GetCapiCorrelationTask/blob/master/README.md'
+    HelpInfoURI          = 'https://github.com/BetaHydri/GetCapiCorrelationTask/blob/master/README.md'
 }
