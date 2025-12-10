@@ -1323,6 +1323,187 @@ function Compare-CapiEvents {
 
 #endregion
 
+#region Simplified Workflow Functions
+
+function Get-CapiCertificateReport {
+    <#
+    .SYNOPSIS
+        Simplified one-command solution to find, analyze, and export certificate errors.
+        
+    .DESCRIPTION
+        This function combines search, error analysis, and export into a single command.
+        Perfect for quickly diagnosing certificate validation issues without writing complex scripts.
+        
+        The function will:
+        1. Search for certificate events by name
+        2. Automatically analyze errors if found
+        3. Optionally export results to HTML, JSON, CSV, or XML
+        4. Display a summary of findings
+        
+    .PARAMETER Name
+        DNS name, certificate subject, or issuer to search for (supports wildcards)
+        
+    .PARAMETER ExportPath
+        Optional path to export the report. Format is auto-detected from file extension (.html, .json, .csv, .xml)
+        If not specified, results are displayed on console only
+        
+    .PARAMETER Hours
+        How many hours to look back in the event log (default: 24)
+        
+    .PARAMETER ShowDetails
+        Display detailed error information in the console (in addition to any export)
+        
+    .PARAMETER OpenReport
+        Automatically open the exported HTML report in default browser
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "expired.badssl.com"
+        Search for expired.badssl.com events and display error analysis
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "microsoft.com" -ExportPath "C:\Reports\microsoft_cert.html"
+        Find microsoft.com events, analyze errors, and export to HTML
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "report.html" -OpenReport
+        Find all contoso.com subdomains, export to HTML, and open in browser
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "badssl" -Hours 2 -ShowDetails -ExportPath "badssl_errors.json"
+        Search last 2 hours for badssl events, show detailed analysis, and export to JSON
+        
+    .NOTES
+        This is the recommended function for most users. It simplifies the workflow from:
+          $Results = Find-CapiEventsByName -Name "site.com"
+          Get-CapiErrorAnalysis -Events $Results[0].Events
+          Export-CapiEvents -Events $Results[0].Events -Path "report.html" -Format HTML
+        To just:
+          Get-CapiCertificateReport -Name "site.com" -ExportPath "report.html"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$Name,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ExportPath,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$Hours = 24,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowDetails,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$OpenReport
+    )
+    
+    Write-Host "`n$(Get-DisplayChar 'RightArrow') Searching for certificate events: $Name" -ForegroundColor Cyan
+    Write-Host "   Time range: Last $Hours hours`n" -ForegroundColor Gray
+    
+    # Search for events
+    $Results = Find-CapiEventsByName -Name $Name -Hours $Hours
+    
+    if (-not $Results -or $Results.Count -eq 0) {
+        Write-Host "$(Get-DisplayChar 'Warning') No certificate events found for: $Name" -ForegroundColor Yellow
+        Write-Host "`nTroubleshooting tips:" -ForegroundColor Cyan
+        Write-Host "  1. Verify CAPI2 logging is enabled: " -NoNewline -ForegroundColor Gray
+        Write-Host "Get-CAPI2EventLogStatus" -ForegroundColor White
+        Write-Host "  2. Reproduce the certificate issue (browse to site, run application)" -ForegroundColor Gray
+        Write-Host "  3. Try a broader search term or increase -Hours parameter" -ForegroundColor Gray
+        Write-Host "  4. Use Start-CAPI2Troubleshooting to prepare for fresh testing`n" -ForegroundColor Gray
+        return
+    }
+    
+    # Display summary
+    Write-Host "$(Get-DisplayChar 'CheckmarkBold') Found $($Results.Count) correlation chain(s) matching '$Name'" -ForegroundColor Green
+    Write-Host ""
+    
+    # Process each chain (usually just one for a specific site)
+    $ChainNumber = 0
+    foreach ($Chain in $Results) {
+        $ChainNumber++
+        
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  Chain #$ChainNumber of $($Results.Count)" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  TaskID: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.TaskID -ForegroundColor White
+        Write-Host "  Timestamp: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.Timestamp -ForegroundColor White
+        Write-Host "  Events: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.Events.Count -ForegroundColor White
+        
+        # Count errors
+        $ErrorEvents = $Chain.Events | Where-Object { $_.Id -eq 30 }
+        $ErrorCount = if ($ErrorEvents) { $ErrorEvents.Count } else { 0 }
+        
+        Write-Host "  Errors: " -NoNewline -ForegroundColor Gray
+        if ($ErrorCount -eq 0) {
+            Write-Host $ErrorCount -ForegroundColor Green
+        }
+        else {
+            Write-Host $ErrorCount -ForegroundColor Red
+        }
+        Write-Host ""
+        
+        # Always show error analysis for the first chain
+        if ($ChainNumber -eq 1 -or $ShowDetails) {
+            Get-CapiErrorAnalysis -Events $Chain.Events -IncludeSummary
+        }
+        
+        # Export if path provided (only first chain by default)
+        if ($ExportPath -and $ChainNumber -eq 1) {
+            Write-Host "`n$(Get-DisplayChar 'RightArrow') Exporting report..." -ForegroundColor Cyan
+            
+            # Determine format from extension
+            $Extension = [System.IO.Path]::GetExtension($ExportPath).ToLower()
+            $Format = switch ($Extension) {
+                '.html' { 'HTML' }
+                '.json' { 'JSON' }
+                '.csv' { 'CSV' }
+                '.xml' { 'XML' }
+                default { 'HTML' }  # Default to HTML
+            }
+            
+            # Add extension if not provided
+            if (-not $Extension) {
+                $ExportPath = "$ExportPath.html"
+                $Format = 'HTML'
+            }
+            
+            # Export
+            Export-CapiEvents -Events $Chain.Events -Path $ExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
+            
+            # Open if requested and it's HTML
+            if ($OpenReport -and $Format -eq 'HTML') {
+                Write-Host "`n$(Get-DisplayChar 'RightArrow') Opening report in browser..." -ForegroundColor Cyan
+                Start-Process $ExportPath
+            }
+        }
+    }
+    
+    # Final summary
+    Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "  $(Get-DisplayChar 'CheckmarkBold') Certificate Report Complete" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    
+    if ($ExportPath) {
+        Write-Host "  Report saved to: " -NoNewline -ForegroundColor Gray
+        Write-Host $ExportPath -ForegroundColor White
+    }
+    
+    if ($Results.Count -gt 1) {
+        Write-Host "`n  Note: Multiple chains found. Only the first chain was analyzed/exported." -ForegroundColor Yellow
+        Write-Host "        Use Find-CapiEventsByName for advanced multi-chain analysis.`n" -ForegroundColor Gray
+    }
+    else {
+        Write-Host ""
+    }
+}
+
+#endregion
+
 #region Workflow Helper Functions
 
 function Start-CAPI2Troubleshooting {
@@ -1506,7 +1687,7 @@ New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias
 Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
     Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
     Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, Get-CAPI2ErrorDetails, `
-    Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
+    Get-CapiCertificateReport, Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
     -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
 
 <#

@@ -80,12 +80,13 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 
 ## 📖 Command Reference
 
-The CAPI2Tools module provides 11 functions and 5 convenient aliases for certificate validation analysis and troubleshooting.
+The CAPI2Tools module provides 12 functions and 5 convenient aliases for certificate validation analysis and troubleshooting.
 
 ### Functions
 
 | Command | Purpose |
 |---------|---------|
+| **`Get-CapiCertificateReport`** | **⭐ RECOMMENDED** - Simplified one-command solution: search, analyze, and export certificate errors in a single step. Perfect for quick diagnostics! |
 | **`Find-CapiEventsByName`** | Search CAPI2 events by DNS name, certificate subject, or issuer. Returns complete correlation chains for matching certificates. |
 | **`Get-CapiTaskIDEvents`** | Retrieve all events in a correlation chain using a TaskID (GUID). Use when you have a specific TaskID from event logs. |
 | **`Get-CapiErrorAnalysis`** | Analyze events for errors and display comprehensive error tables with severity levels, descriptions, common causes, and resolution steps. |
@@ -113,6 +114,9 @@ Convenient shortcuts for commonly used commands:
 ### Quick Reference Examples
 
 ```powershell
+# ⭐ SIMPLEST: One command to do everything
+Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "report.html"
+
 # Search for events (function or alias)
 Find-CapiEventsByName -Name "microsoft.com"
 Find-CertEvents -Name "microsoft.com"              # Same using alias
@@ -193,7 +197,30 @@ Add-Content $PROFILE "`nImport-Module CAPI2Tools"
 
 ## ⚡ Quick Start
 
-### Complete Troubleshooting Workflow
+### Simplest Workflow (Recommended for Most Users)
+
+The **easiest way** to diagnose certificate issues - one command does it all:
+
+```powershell
+# Just search and view results
+Get-CapiCertificateReport -Name "problematic-site.com"
+
+# Search and export to HTML in one command
+Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "report.html"
+
+# Search, export, and open report automatically
+Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "report.html" -OpenReport
+```
+
+**That's it!** This single command:
+- ✅ Searches for certificate events
+- ✅ Analyzes all errors automatically
+- ✅ Exports to HTML/JSON/CSV/XML
+- ✅ Shows clear, actionable results
+
+### Advanced Workflow (For Power Users)
+
+For complex scenarios requiring manual control:
 
 ```powershell
 # 1. Enable CAPI2 logging
@@ -220,6 +247,8 @@ Compare-CapiEvents -ReferenceEvents $Results[0].Events -DifferenceEvents $After[
 # 8. Disable logging when done
 Disable-CAPI2EventLog
 ```
+
+**Note**: The simplified `Get-CapiCertificateReport` function handles steps 4-6 automatically!
 
 ---
 
@@ -496,7 +525,35 @@ Internal helper that translates error codes to human-readable descriptions.
 
 ## 📚 Examples
 
-### Example 1: Complete Troubleshooting Session
+### Example 1: Quick Certificate Diagnosis (Recommended)
+
+```powershell
+# ⭐ The easiest way - one command does everything!
+Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "report.html"
+
+# With automatic browser opening
+Get-CapiCertificateReport -Name "self-signed.badssl.com" -ExportPath "report.html" -OpenReport
+
+# Export to JSON for automation
+Get-CapiCertificateReport -Name "wrong.host.badssl.com" -ExportPath "errors.json"
+
+# Search last 2 hours with detailed output
+Get-CapiCertificateReport -Name "problematic-site.com" -Hours 2 -ShowDetails
+```
+
+**Before this simplified function, you had to write:**
+```powershell
+$Results = Find-CapiEventsByName -Name "expired.badssl.com"
+Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+Export-CapiEvents -Events $Results[0].Events -Path "report.html" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+```
+
+**Now just one line:**
+```powershell
+Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "report.html"
+```
+
+### Example 2: Traditional Complete Troubleshooting Session (Advanced)
 
 ```powershell
 # Start fresh troubleshooting session
@@ -513,7 +570,7 @@ Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\issue_report.html" -IncludeErrorAnalysis
 ```
 
-### Example 2: Track Fix Progress
+### Example 3: Track Fix Progress
 
 ```powershell
 # Capture baseline
