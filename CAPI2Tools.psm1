@@ -1357,15 +1357,15 @@ function Get-X509CertificateInfo {
         
         # Build certificate info object
         return [PSCustomObject]@{
-            SubjectCN      = $SubjectCN
-            Organization   = $Organization
-            Country        = $Country
-            IssuerCN       = $IssuerCN
-            SANs           = $SANs
-            SerialNumber   = $SerialNumber
-            NotBefore      = $NotBefore
-            NotAfter       = $NotAfter
-            HasSANs        = ($SANs.Count -gt 0)
+            SubjectCN    = $SubjectCN
+            Organization = $Organization
+            Country      = $Country
+            IssuerCN     = $IssuerCN
+            SANs         = $SANs
+            SerialNumber = $SerialNumber
+            NotBefore    = $NotBefore
+            NotAfter     = $NotAfter
+            HasSANs      = ($SANs.Count -gt 0)
         }
     }
     catch {
@@ -1395,43 +1395,43 @@ function Get-EventChainSummary {
         100 = "Build Chain Context"
         
         # Chain Verification
-        30 = "Verify Chain Policy"
-        31 = "Verify Chain Policy Result"
-        32 = "Chain Policy Context"
+        30  = "Verify Chain Policy"
+        31  = "Verify Chain Policy Result"
+        32  = "Chain Policy Context"
         
         # Revocation Checking
-        70 = "Verify Revocation"
-        71 = "Revocation Status"
-        52 = "Retrieve CRL"
-        53 = "Retrieve OCSP"
+        70  = "Verify Revocation"
+        71  = "Revocation Status"
+        52  = "Retrieve CRL"
+        53  = "Retrieve OCSP"
         
         # Certificate Operations
-        90 = "X509 Objects"
-        10 = "Verify Trust"
-        14 = "Certificate Details"
-        15 = "Certificate Path"
+        90  = "X509 Objects"
+        10  = "Verify Trust"
+        14  = "Certificate Details"
+        15  = "Certificate Path"
         
         # Cryptographic Operations
-        40 = "Private Key"
-        41 = "Sign Hash"
-        42 = "Verify Signature"
+        40  = "Private Key"
+        41  = "Sign Hash"
+        42  = "Verify Signature"
         
         # CRL/CTL Operations
-        50 = "CRL Retrieval"
-        51 = "CRL Verification"
-        80 = "CTL Operations"
-        81 = "CTL Retrieval"
+        50  = "CRL Retrieval"
+        51  = "CRL Verification"
+        80  = "CTL Operations"
+        81  = "CTL Retrieval"
         
         # Chain Context
-        1  = "Retrieve Object from Cache"
-        2  = "Add Object to Cache"
-        3  = "Remove Object from Cache"
-        4  = "Cache Flush"
+        1   = "Retrieve Object from Cache"
+        2   = "Add Object to Cache"
+        3   = "Remove Object from Cache"
+        4   = "Cache Flush"
         
         # Network Retrieval
-        20 = "Begin Network Retrieval"
-        21 = "End Network Retrieval"
-        22 = "Network Retrieval Timeout"
+        20  = "Begin Network Retrieval"
+        21  = "End Network Retrieval"
+        22  = "Network Retrieval Timeout"
         
         # Errors and Warnings
         101 = "Chain Error"
@@ -1683,7 +1683,8 @@ function Get-CapiErrorAnalysis {
                     if ($FirstSAN) {
                         Write-Host "$SAN" -ForegroundColor Cyan
                         $FirstSAN = $false
-                    } else {
+                    }
+                    else {
                         Write-Host "                   $SAN" -ForegroundColor Cyan
                     }
                 }
@@ -1698,8 +1699,8 @@ function Get-CapiErrorAnalysis {
                 Write-Host "  Valid:           " -NoNewline -ForegroundColor Gray
                 $Now = Get-Date
                 $ValidityColor = if ($Now -lt $CertInfo.NotBefore) { "Yellow" } 
-                                elseif ($Now -gt $CertInfo.NotAfter) { "Red" }
-                                else { "Green" }
+                elseif ($Now -gt $CertInfo.NotAfter) { "Red" }
+                else { "Green" }
                 Write-Host "$($CertInfo.NotBefore.ToString('yyyy-MM-dd')) to $($CertInfo.NotAfter.ToString('yyyy-MM-dd'))" -ForegroundColor $ValidityColor
             }
             Write-Host ""
