@@ -501,9 +501,15 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Format parameter should reject invalid values" {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            # Should throw because 'TXT' is not in ValidateSet (parameter binding error)
-            # Must use scriptblock without Invoke-Expression for ValidateSet to trigger
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -Hours 1 } | Should Throw
+            # ValidateSet should reject 'TXT' - use try/catch since Pester v3 has issues with Should Throw and parameter validation
+            $ThrowsError = $false
+            try {
+                Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -Hours 1 -ErrorAction Stop
+            }
+            catch {
+                $ThrowsError = $true
+            }
+            $ThrowsError | Should Be $true
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -562,9 +568,15 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
         
         It "Should reject invalid Format values" {
-            # This should throw a parameter validation error because 'PDF' is not in ValidateSet (parameter binding error)
-            # Must use scriptblock without Invoke-Expression for ValidateSet to trigger
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" -Hours 1 } | Should Throw
+            # ValidateSet should reject 'PDF' - use try/catch since Pester v3 has issues with Should Throw and parameter validation  
+            $ThrowsError = $false
+            try {
+                Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" -Hours 1 -ErrorAction Stop
+            }
+            catch {
+                $ThrowsError = $true
+            }
+            $ThrowsError | Should Be $true
         }
     }
 }
