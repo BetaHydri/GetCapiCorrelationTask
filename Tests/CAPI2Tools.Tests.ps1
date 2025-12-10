@@ -479,12 +479,56 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
         
         It "Should accept all parameters together" {
-            $TempPath = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss').html"
+            $TempDir = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempPath -Hours 24 -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 24 -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
             
-            if (Test-Path $TempPath) {
-                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should create export directory if it doesn't exist" {
+            $TempDir = Join-Path $env:TEMP "cert_autocreate_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            # Ensure directory doesn't exist
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force
+            }
+            
+            # This should create the directory automatically
+            Get-CapiCertificateReport -Name "test-autocreate.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue | Out-Null
+            
+            # Directory should now exist (even if no events were found)
+            Test-Path $TempDir | Should Be $true
+            (Get-Item $TempDir).PSIsContainer | Should Be $true
+            
+            # Cleanup
+            Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        It "Should reject ExportPath if it's a file, not a directory" {
+            $TempFile = Join-Path $env:TEMP "cert_test_file_$(Get-Date -Format 'yyyyMMddHHmmss').txt"
+            
+            # Create a file (not directory)
+            "test" | Out-File $TempFile
+            
+            # This should throw an error
+            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
+            
+            # Cleanup
+            Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
+        }
+        
+        It "Should reject invalid Format values" {
+            $TempDir = Join-Path $env:TEMP "cert_invalid_format_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            # This should throw because 'PDF' is not a valid format
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "PDF" -ErrorAction Stop } | Should Throw
+            
+            # Cleanup
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
     }
