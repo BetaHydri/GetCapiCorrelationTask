@@ -1623,7 +1623,9 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 ## 📊 Version History
 
 | Version | Date | Changes |
-|---------|------|---------||
+|---------|------|---------|
+| 2.12.0 | December 2025 | X.509 Certificate Information display from Event 90, Subject Alternative Names (DNS, UPN, Email), smart end-entity certificate selection, enhanced HTML reports with certificate details section, 25+ CAPI2 Event IDs mapped (CRL Retrieval, CTL Operations, Network Retrieval), TaskID format normalization, robust XML namespace handling |
+| 2.11.0 | December 2025 | Event chain display with `-ShowEventChain` parameter, AuxInfo sequence numbers for chronological ordering, Task Categories (Build Chain, X509 Objects, Verify Chain Policy), complete event visibility with all Event IDs, automatic event chain tables in HTML exports |
 | 2.10.1 | December 2025 | Event ID 82 support (catalog lookup failures), 13 new error codes (ERROR_NOT_FOUND, CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, etc.), certificate thumbprint extraction and display, enhanced enterprise diagnostics |
 | 2.10 | December 2025 | TrustStatus parsing with 23 ErrorStatus and 13 InfoStatus flags, enhanced error analysis with detailed trust chain validation, improved HTML reports with trust details column, automatic severity tracking (Critical/Error/Warning), comprehensive certificate chain diagnostics |
 | 2.9 | December 2025 | Multi-file export (each chain to separate file), smart auto-generated filenames, directory-based ExportPath, Format parameter with ValidateSet, eliminated file overwrite issues |
