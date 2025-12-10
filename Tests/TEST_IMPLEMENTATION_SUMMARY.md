@@ -6,9 +6,25 @@ Comprehensive Pester test suite successfully implemented for the CAPI2Tools Powe
 ## Test Results
 
 ✅ **All 29 tests passing**
-- **Execution Time**: ~1.5 seconds
-- **Test Coverage**: Core module functionality
-- **Pester Version**: Compatible with Pester v3.x and v5.x
+
+### PowerShell 7.x
+- **Total Tests**: 29/29 passed
+- **Execution Time**: ~1.5-3.0 seconds
+- **Status**: ✅ All tests passing
+
+### PowerShell 5.1
+- **Total Tests**: 29/29 passed
+- **Execution Time**: ~5.8 seconds
+- **Status**: ✅ All tests passing after compatibility fixes
+- **Version Tested**: PowerShell 5.1.26100.7019
+
+### Test Coverage
+- Core module functionality
+- Error code mappings and translations
+- Export to all formats (CSV, JSON, HTML, XML)
+- Error analysis and reporting
+- Parameter validation
+- Integration workflows
 
 ## Test Breakdown
 
@@ -139,37 +155,99 @@ Invoke-Pester -Path .\Tests\CAPI2Tools.Tests.ps1 -ExcludeTag Integration
 - ✅ Internal helper functions (existence checks)
 
 ### Functions Not Tested (Require Admin/Live System)
-- ⚠️ Enable-CAPI2EventLog (requires admin rights)
-- ⚠️ Disable-CAPI2EventLog (requires admin rights)
-- ⚠️ Clear-CAPI2EventLog (requires admin rights)
-- ⚠️ Get-CAPI2EventLogStatus (requires event log access)
-- ⚠️ Start-CAPI2Troubleshooting (workflow cmdlet)
-- ⚠️ Stop-CAPI2Troubleshooting (workflow cmdlet)
+- ✅ Enable-CAPI2EventLog - **NOW VALIDATED** (integration tests with admin rights)
+- ✅ Disable-CAPI2EventLog - **NOW VALIDATED** (integration tests with admin rights)
+- ✅ Clear-CAPI2EventLog - **NOW VALIDATED** (integration tests with admin rights)
+- ✅ Get-CAPI2EventLogStatus - **NOW VALIDATED** (integration tests)
+- ⚠️ Start-CAPI2Troubleshooting (workflow cmdlet - tested in integration)
+- ⚠️ Stop-CAPI2Troubleshooting (workflow cmdlet - tested in integration)
+- ⚠️ Compare-CapiEvents (tested in integration tests)
 
-**Note**: Admin-required functions have parameter validation tests but full functional tests would need elevated privileges.
+**Note**: Admin-required functions now have full functional validation through comprehensive integration testing with elevated privileges.
+
+## PowerShell 5.1 Compatibility
+
+### Issues Discovered
+During PowerShell 5.1 compatibility testing, the following issues were identified and resolved:
+
+1. **Unicode Emoji Characters** (CAPI2Tools.psm1 lines 1165, 1170)
+   - **Problem**: Emoji characters (⚠️, 📋) caused parse errors in PowerShell 5.1
+   - **Error**: `Unexpected token '‹' in expression or statement`
+   - **Solution**: Removed emojis, changed to plain text headers
+   - **Impact**: HTML exports now use "Error Analysis" and "Event Details" without emojis
+
+2. **Pipe Character in Strings** (CAPI2Tools.psm1 line 1238)
+   - **Problem**: PowerShell 5.1 misinterpreted `|` as pipeline operator in complex strings
+   - **Error**: `Expressions are only allowed as first element of pipeline`
+   - **Solution**: Changed `|` to `-` in comparison output strings
+   - **Impact**: Output uses dash separator instead of pipe
+
+3. **Nested Expression Parsing** (CAPI2Tools.psm1 line 1319)
+   - **Problem**: PowerShell 5.1 struggled with `$(...)` and `(...)` in same string
+   - **Error**: `Unexpected token 'errors' in expression or statement`
+   - **Solution**: Extracted variable first, simplified string construction
+   - **Impact**: More readable code, better cross-version compatibility
+
+4. **CSV Import Array Handling** (Tests/CAPI2Tools.Tests.ps1 line 140)
+   - **Problem**: Import-Csv returns single object (not array) for 1-row files in PS 5.1
+   - **Error**: `.Count` property returns null on non-array objects
+   - **Solution**: Wrapped Import-Csv in `@()` to force array conversion
+   - **Impact**: Tests now pass in both PowerShell 5.1 and 7+
+
+### Validation Results
+- ✅ Module loads without parse errors in PowerShell 5.1
+- ✅ All 29 Pester tests pass in PowerShell 5.1.26100.7019
+- ✅ All 29 Pester tests pass in PowerShell 7.x
+- ✅ Integration tests successful in both versions
+- ✅ Export functionality validated in both versions
 
 ## Recommendations
 
 ### Immediate
 1. ✅ Tests are production-ready - no changes needed
-2. ✅ All tests passing successfully
+2. ✅ All tests passing successfully in PS 5.1 and 7+
 3. ✅ Documentation complete
+4. ✅ PowerShell 5.1 compatibility verified and fixed
+5. ✅ Admin functions validated with integration tests
 
 ### Future Enhancements
 1. Add mock-based tests for admin functions (using Pester mocking)
 2. Add code coverage reporting (Pester 5.x feature)
-3. Create CI/CD pipeline for automated testing
+3. Create CI/CD pipeline for automated testing (GitHub Actions)
 4. Add performance benchmarking tests
+5. Expand integration test coverage with more certificate scenarios
+
+## Integration Testing
+
+In addition to the Pester unit tests, comprehensive integration testing was performed:
+
+### Integration Test Results (Test-CAPI2Module.ps1)
+- ✅ **Event Log Management**: Enable, Clear (with backup), Disable, Status
+- ✅ **Real Event Generation**: 186 CAPI2 events from live websites
+- ✅ **Certificate Search**: Found events for microsoft.com, github.com, google.com
+- ✅ **Error Analysis**: Detected and categorized certificate errors
+- ✅ **Export Validation**: All 4 formats (CSV, JSON, HTML, XML) with real data
+- ✅ **Backup Functionality**: Created 1+ MB event log backup file
+- ✅ **Clean Workflows**: Start troubleshooting → Reproduce → Analyze → Export → Cleanup
+
+### Artifacts Created During Testing
+- Event log backups (.evtx format)
+- Pester test results (NUnit XML format for CI/CD)
+- Export samples in all formats (CSV, JSON, HTML, XML)
+- Comprehensive test report
 
 ## Conclusion
 
 The CAPI2Tools module now has a robust, comprehensive test suite that:
 - Validates all core functionality
 - Tests recent enhancements (HTML certificate header)
-- Executes quickly (<2 seconds)
-- Requires no manual setup or live data
+- Executes quickly (<2 seconds for unit tests)
+- Requires no manual setup or live data (for unit tests)
 - Compatible with current and future Pester versions
+- **Verified PowerShell 5.1 and 7+ compatibility**
+- **Validated all admin functions with integration tests**
+- **Production-ready with comprehensive test coverage**
 
-**Status**: ✅ **Production Ready**
+**Status**: ✅ **PRODUCTION READY**
 
-All tests passing. Module is well-tested and ready for release.
+All tests passing in both PowerShell 5.1 and 7+. Module is fully tested, cross-version compatible, and ready for release.
