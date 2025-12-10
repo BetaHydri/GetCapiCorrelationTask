@@ -684,6 +684,38 @@ $AppEvents = $Results | ForEach-Object {
 Get-CapiErrorAnalysis -Events $AppEvents
 ```
 
+### Example 8: Process Multiple Certificate Chains
+
+```powershell
+# Find all microsoft.com certificate validations in last 5 hours
+$Results = Find-CapiEventsByName -Name "microsoft.com" -Hours 5
+
+# Display all TaskIDs found
+$Results | Select-Object -Property TaskID
+
+# Process each chain individually
+foreach ($Result in $Results) {
+    Write-Host "`n=== Processing TaskID: $($Result.TaskID) ===" -ForegroundColor Cyan
+    
+    # Get full event chain
+    $Events = Get-CapiTaskIDEvents -TaskID $Result.TaskID
+    
+    # Analyze for errors
+    $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
+    
+    # Export to separate file
+    if ($ErrorAnalysis) {
+        $FileName = "microsoft_$($Result.TaskID.Substring(0,8)).html"
+        Export-CapiEvents -Events $Events -Path "C:\Reports\$FileName" -IncludeErrorAnalysis -TaskID $Result.TaskID
+        Write-Host "Exported: $FileName" -ForegroundColor Green
+    }
+}
+
+# Or use the simplified approach for single chain
+$TaskID = ($Results | Select-Object -First 1).TaskID
+Get-CapiTaskIDEvents -TaskID $TaskID | Get-CapiErrorAnalysis -IncludeSummary
+```
+
 ---
 
 ## 🔐 Error Codes Reference
