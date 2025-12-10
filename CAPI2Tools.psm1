@@ -1590,13 +1590,13 @@ function Get-CapiErrorAnalysis {
         Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
         
     .EXAMPLE
-        $Results = Find-CapiEventsByName -Name "expired.badssl.com"
-        Get-CapiErrorAnalysis -Events $Results[0].Events -ShowEventChain
+        # Pipeline support - automatically uses .Events property
+        Find-CapiEventsByName -Name "expired.badssl.com" | Get-CapiErrorAnalysis -ShowEventChain
         Shows all CAPI2 events in the chain with their categories (Build Chain, X509 Objects, etc.)
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [array]$Events,
         
         [Parameter(Mandatory = $false)]

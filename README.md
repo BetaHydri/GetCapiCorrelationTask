@@ -150,9 +150,9 @@ Clear-CAPI2EventLog     # or Clear-CapiLog
 # Check log status
 Get-CAPI2EventLogStatus
 
-# Analyze and export
+# Analyze and export (using pipeline support)
+Find-CertEvents -Name "example.com" | Get-CapiErrorAnalysis
 $Events = Find-CertEvents -Name "example.com"
-Get-CapiErrorAnalysis -Events $Events[0].Events
 Export-CapiEvents -Events $Events[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Events[0].TaskID
 ```
 
@@ -253,8 +253,8 @@ Clear-CAPI2EventLog
 # 4. Search for events by domain name
 $Results = Find-CapiEventsByName -Name "yoursite.com"
 
-# 5. Analyze errors with detailed explanations
-Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+# 5. Analyze errors with detailed explanations (pipeline support)
+Find-CapiEventsByName -Name "yoursite.com" | Get-CapiErrorAnalysis -IncludeSummary
 
 # 6. Export for documentation
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
@@ -325,6 +325,7 @@ Find-CapiEventsByName -Name "DigiCert"
 Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation
 Find-CapiEventsByName -Name "expired.badssl.com" -FilterType Expired
 Find-CapiEventsByName -Name "self-signed.badssl.com" -FilterType Untrusted
+Find-CapiEventsByName -Name "*.contoso.com" -FilterType ErrorsOnly
 
 # Custom pattern filtering (advanced)
 Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
@@ -346,12 +347,17 @@ Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
 Get comprehensive error analysis with resolution steps:
 
 ```powershell
-# Analyze errors from search results
-$Results = Find-CapiEventsByName -Name "failingsite.com"
-Get-CapiErrorAnalysis -Events $Results[0].Events
+# Analyze errors from search results (pipeline support)
+Find-CapiEventsByName -Name "failingsite.com" | Get-CapiErrorAnalysis
 
 # Include error summary
-Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+Find-CapiEventsByName -Name "failingsite.com" | Get-CapiErrorAnalysis -IncludeSummary
+
+# Filter for errors only using FilterType (recommended for large logs)
+Find-CapiEventsByName -Name "*.contoso.com" -FilterType ErrorsOnly | Get-CapiErrorAnalysis -IncludeSummary
+
+# Show event chain with errors
+Find-CapiEventsByName -Name "expired.badssl.com" -FilterType ErrorsOnly | Get-CapiErrorAnalysis -ShowEventChain
 
 # Direct TaskID analysis
 $Events = Get-CapiTaskIDEvents -TaskID "GUID-HERE"
@@ -478,10 +484,10 @@ Retrieves all CAPI2 events that share the same correlation TaskID.
 ### Analysis Functions
 
 #### `Get-CapiErrorAnalysis`
-Analyzes CAPI2 events and presents errors in a comprehensive table format with descriptions and resolutions.
+Analyzes CAPI2 events and presents errors in a comprehensive table format with descriptions and resolutions. **Supports pipeline input** from `Find-CapiEventsByName` and other functions.
 
 **Parameters**:
-- `Events` (Required): Array of CAPI2 events
+- `Events` (Required): Array of CAPI2 events (supports pipeline input from `.Events` property)
 - `IncludeSummary`: Shows error count summary
 - `ShowEventChain`: Display full CAPI2 correlation chain with Task Categories (Build Chain, X509 Objects, Verify Chain Policy, etc.)
 
@@ -489,8 +495,8 @@ Analyzes CAPI2 events and presents errors in a comprehensive table format with d
 
 **Example**:
 ```powershell
-# Show errors with full event chain
-Get-CapiErrorAnalysis -Events $Events -ShowEventChain
+# Pipeline support - automatically uses .Events property
+Find-CapiEventsByName -Name "expired.badssl.com" | Get-CapiErrorAnalysis -ShowEventChain
 
 # Output includes:
 # - CAPI2 Correlation Chain Events table (Sequence, Time, Level, Event ID, Task Category)
@@ -635,7 +641,7 @@ Get-CapiCertificateReport -Name "problematic-site.com" -Hours 2 -ShowDetails
 **Before this simplified function, you had to write:**
 ```powershell
 $Results = Find-CapiEventsByName -Name "expired.badssl.com"
-Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+Find-CapiEventsByName -Name "expired.badssl.com" | Get-CapiErrorAnalysis -IncludeSummary
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 ```
 
@@ -653,9 +659,8 @@ Clear-CAPI2EventLog
 
 # Reproduce the issue (browse to failing site, etc.)
 
-# Find and analyze events
-$Results = Find-CapiEventsByName -Name "problematic-site.com"
-Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
+# Find and analyze events (pipeline support)
+Find-CapiEventsByName -Name "problematic-site.com" | Get-CapiErrorAnalysis -IncludeSummary
 
 # Export for documentation
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
@@ -666,11 +671,8 @@ Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -In
 See all events in the correlation chain with their sequence numbers and task categories:
 
 ```powershell
-# Find certificate validation chain
-$Results = Find-CapiEventsByName -Name "expired.badssl.com"
-
-# Display with full event chain
-Get-CapiErrorAnalysis -Events $Results[0].Events -ShowEventChain
+# Find certificate validation chain and display with full event chain (pipeline support)
+Find-CapiEventsByName -Name "expired.badssl.com" | Get-CapiErrorAnalysis -ShowEventChain
 
 # Output shows:
 # - Sequence numbers (1, 2, 3, etc.)
@@ -759,7 +761,7 @@ FilterType provides intuitive filtering with tab completion for common scenarios
 ```powershell
 # Find revocation check failures (CRL/OCSP)
 $Results = Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation
-$Analysis = Get-CapiErrorAnalysis -Events $Results[0].Events
+$Analysis = Find-CapiEventsByName -Name "site.com" | Get-CapiErrorAnalysis
 
 # Example output:
 # ErrorCode   : 0x80092013 (CRYPT_E_REVOCATION_OFFLINE)
