@@ -1700,11 +1700,25 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
     <tbody>
 "@
                             foreach ($ErrorEntry in $ErrorAnalysis) {
-                                # Skip errors without certificate information (not useful in report)
-                                if ($ErrorEntry.Certificate -eq "(not available)" -and 
-                                    $ErrorEntry.Thumbprint -eq "(not available)" -and
-                                    (-not $ErrorEntry.TrustStatus -or 
-                                     ($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0 -and $ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))) {
+                                # Skip errors without useful information
+                                # Check if certificate is missing or placeholder
+                                $HasNoCert = (-not $ErrorEntry.Certificate) -or 
+                                            ($ErrorEntry.Certificate -eq "(not available)") -or
+                                            ($ErrorEntry.Certificate -eq "")
+                                            
+                                # Check if thumbprint is missing or placeholder  
+                                $HasNoThumb = (-not $ErrorEntry.Thumbprint) -or
+                                             ($ErrorEntry.Thumbprint -eq "(not available)") -or
+                                             ($ErrorEntry.Thumbprint -eq "")
+                                             
+                                # Check if TrustStatus has useful data
+                                $HasNoTrust = (-not $ErrorEntry.TrustStatus) -or
+                                             (($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0) -and 
+                                              ($ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))
+                                
+                                # Skip if ALL three are empty/useless
+                                if ($HasNoCert -and $HasNoThumb -and $HasNoTrust) {
+                                    Write-Verbose "Skipping non-informative error: $($ErrorEntry.ErrorName)"
                                     continue
                                 }
                                 
