@@ -1520,9 +1520,9 @@ function Get-CapiCertificateReport {
         Display detailed error information in the console (in addition to any export)
         
     .PARAMETER OpenReport
-        Automatically open the exported HTML report in default browser
+        Automatically open Windows Explorer to show the exported reports directory
         Requires -ExportPath to be specified
-        Only works with HTML files (.html extension)
+        Opens the directory containing all exported files for easy access
         
     .EXAMPLE
         Get-CapiCertificateReport -Name "expired.badssl.com"
@@ -1534,7 +1534,7 @@ function Get-CapiCertificateReport {
         
     .EXAMPLE
         Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "C:\Reports" -Format JSON -OpenReport
-        Find all contoso.com subdomains, export each to separate JSON files, and open first report
+        Find all contoso.com subdomains, export each to separate JSON files, and open Explorer to show reports
         
     .EXAMPLE
         Get-CapiCertificateReport -Name "*microsoft.com" -ExportPath "C:\temp" -Hours 5 -ShowDetails -Format HTML
@@ -1734,12 +1734,6 @@ function Get-CapiCertificateReport {
             Export-CapiEvents -Events $Chain.Events -Path $FullExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
             
             $ExportedFiles += $FullExportPath
-            
-            # Open first report if requested and it's HTML
-            if ($OpenReport -and $Format -eq 'HTML' -and $ChainNumber -eq 1) {
-                Write-Host "$(Get-DisplayChar 'RightArrow') Opening report in browser..." -ForegroundColor Cyan
-                Start-Process $FullExportPath
-            }
         }
         
         Write-Host ""
@@ -1769,14 +1763,19 @@ function Get-CapiCertificateReport {
             }
             Write-Host "    ... and $($ExportedFiles.Count - 4) more files ..." -ForegroundColor Gray
             Write-Host "    - " -NoNewline -ForegroundColor Gray
-            Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
+                Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
+        }
+        
+        # Open Explorer to show the reports directory if requested
+        if ($OpenReport) {
+            Write-Host ""
+            Write-Host "$(Get-DisplayChar 'RightArrow') Opening Explorer to show reports..." -ForegroundColor Cyan
+            Start-Process "explorer.exe" -ArgumentList $ExportPath
         }
     }
     
     Write-Host ""
-}
-
-#endregion
+}#endregion
 
 #region Workflow Helper Functions
 
