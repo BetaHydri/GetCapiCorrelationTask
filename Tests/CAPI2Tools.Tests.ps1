@@ -206,6 +206,40 @@ Describe "CAPI2Tools Module" {
             $Result = Get-CapiErrorAnalysis -Events $MockGoodEvents
             $Result | Should BeNullOrEmpty
         }
+        
+        It "Should not treat Event ID 30 Flags as error codes (bug fix regression test)" {
+            # Event ID 30 contains Flags with value attributes that are NOT error codes
+            # This test ensures we only parse Result/Error nodes, not all value attributes
+            $MockEvent30 = @(
+                [PSCustomObject]@{
+                    TimeCreated     = Get-Date
+                    ID              = 30
+                    DetailedMessage = '<CertVerifyCertificateChainPolicy><Policy type="CERT_CHAIN_POLICY_MICROSOFT_ROOT" constant="7" /><Certificate subjectName="Test Certificate" /><Flags value="F00" CERT_CHAIN_POLICY_IGNORE_END_REV_UNKNOWN_FLAG="true" /><Result value="0" /></CertVerifyCertificateChainPolicy>'
+                }
+            )
+            
+            $Result = Get-CapiErrorAnalysis -Events $MockEvent30
+            # Should return null because Result value="0" is success
+            # Should NOT return UNKNOWN error for Flags value="F00"
+            $Result | Should BeNullOrEmpty
+        }
+        
+        It "Should detect actual errors in Event ID 30 Result nodes" {
+            # Event ID 30 with actual error in Result node
+            $MockEvent30Error = @(
+                [PSCustomObject]@{
+                    TimeCreated     = Get-Date
+                    ID              = 30
+                    DetailedMessage = '<CertVerifyCertificateChainPolicy><Policy type="CERT_CHAIN_POLICY_SSL" constant="4" /><Certificate subjectName="expired.badssl.com" /><Flags value="F00" /><Result value="0x800B0101" /></CertVerifyCertificateChainPolicy>'
+                }
+            )
+            
+            $Result = Get-CapiErrorAnalysis -Events $MockEvent30Error
+            # Should detect the actual error code in Result node
+            $Result | Should Not BeNullOrEmpty
+            $Result[0].ErrorCode | Should Be '0x800B0101'
+            $Result[0].ErrorName | Should Be 'CERT_E_EXPIRED'
+        }
     }
     
     Context "Format-XML Function" {
