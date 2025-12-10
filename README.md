@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.11.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.12.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,20 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.11.0** adds CAPI2 correlation chain event display with AuxInfo sequence numbers.
+**Version 2.12.0** adds X.509 certificate information display from Event 90, showing DNS SANs, UPNs, and certificate details at the top of each correlation report.
+
+### What's New in v2.12.0
+
+- 📜 **X.509 Certificate Information**: Event 90 (X509 Objects) now displays detailed certificate information at the top of reports
+- 🌐 **Subject Alternative Names (SANs)**: Shows all DNS names, UPNs, and email addresses from certificates
+- 🎯 **Smart Certificate Selection**: Automatically identifies and displays the end-entity certificate (not CA certs)
+- 🔍 **Complete Details**: Subject CN, Organization, Issuer, Serial Number, and Validity Period with color-coded status
+- 📊 **HTML Reports Enhanced**: Certificate info section automatically included in all HTML exports
+- 🔧 **TaskID Format Fix**: Handles both `{GUID}` and `GUID` formats in Event 90 correlation
+- 📋 **Expanded Event Coverage**: 25+ CAPI2 Event IDs mapped (CRL Retrieval, CTL Operations, Network Retrieval, etc.)
+- ⚡ **Namespace Handling**: Robust XML parsing using `GetElementsByTagName` for Event 90
+- 🏢 **Server & User Certs**: Displays server DNS names for server certs, UPNs for user certificates
+- ✅ **Validity Indicators**: Visual indicators for expired, not-yet-valid, or currently valid certificates
 
 ### What's New in v2.11.0
 
@@ -548,8 +561,25 @@ Get-CapiErrorAnalysis -Events $Events -ShowEventChain
 # - Trust Chain validation details
 ```
 
-**Event Chain Output Example**:
+**Event Chain Output Example with X.509 Certificate Information**:
 ```
+╔═══════════════════════════════════════════════════════════════╗
+║           Certificate Information (Event 90)                  ║
+╚═══════════════════════════════════════════════════════════════╝
+  Subject CN:      *.events.data.microsoft.com
+  Organization:    Microsoft Corporation
+  Country:         US
+  Issued By:       Microsoft Azure RSA TLS Issuing CA 07
+  SANs:            DNS: *.events.data.microsoft.com
+                   DNS: events.data.microsoft.com
+                   DNS: *.pipe.aria.microsoft.com
+                   DNS: pipe.skype.com
+                   DNS: *.pipe.skype.com
+                   DNS: *.mobile.events.data.microsoft.com
+                   DNS: mobile.events.data.microsoft.com
+  Serial:          0A1B2C3D4E5F60718293A4B5C6D7E8F9
+  Valid:           2024-11-15 to 2025-05-14
+
 === CAPI2 Correlation Chain Events ===
 Total events in chain: 9
 Events are sorted by AuxInfo sequence number
@@ -558,11 +588,18 @@ Sequence TimeCreated          Level       EventID TaskCategory
 -------- -----------          -----       ------- ------------
 1        10/12/2025 21:05:07  Information 11      Build Chain
 2        10/12/2025 21:05:07  Information 90      X509 Objects
-3        10/12/2025 21:05:07  Information 10      Build Chain
+3        10/12/2025 21:05:07  Information 10      Verify Trust
 4        10/12/2025 21:05:07  Information 30      Verify Chain Policy
 5        10/12/2025 21:05:07  Error       30      Verify Chain Policy
 ...
 ```
+
+**Certificate Information Features:**
+- Shows end-entity certificate details (not intermediate CAs)
+- DNS SANs displayed for server certificates
+- UPNs shown for user certificates (e.g., `user@domain.com`)
+- Color-coded validity status (✅ Valid / ⚠️ Not Yet Valid / ❌ Expired)
+- Automatically included in HTML reports
 
 ---
 

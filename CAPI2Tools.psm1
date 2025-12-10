@@ -8,7 +8,7 @@
     
 .NOTES
     Module Name:    CAPI2Tools
-    Version:        2.10.1
+    Version:        2.12.0
     Author:         Jan Tiedemann
     Copyright:      (c) 2022-2025 Jan Tiedemann. Licensed under GNU GPL v3.
     
