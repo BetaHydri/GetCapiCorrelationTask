@@ -450,8 +450,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             # Verify it's a file
             Test-Path $TempFile -PathType Leaf | Should Be $true
             
-            # Should write error when ExportPath is a file
-            $ErrorOutput = Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction SilentlyContinue 2>&1
+            # Should write error when ExportPath is a file (use ErrorAction Continue to capture error in stream)
+            $ErrorOutput = Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction Continue 2>&1
             $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
             
             # Clean up
@@ -502,7 +502,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             # Should throw because 'TXT' is not in ValidateSet (parameter binding error)
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -Hours 1 } | Should Throw
+            # Use Invoke-Expression to ensure parameter binding occurs in the scriptblock
+            { Invoke-Expression 'Get-CapiCertificateReport -Name "test.com" -ExportPath "$TempDir" -Format "TXT" -Hours 1' } | Should Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -552,8 +553,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             # Create a file (not directory)
             "test" | Out-File $TempFile
             
-            # Should write error when ExportPath is a file (Write-Error doesn't throw, just outputs to error stream)
-            $ErrorOutput = Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction SilentlyContinue 2>&1
+            # Should write error when ExportPath is a file (use ErrorAction Continue to capture error in stream)
+            $ErrorOutput = Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -Hours 1 -ErrorAction Continue 2>&1
             $ErrorOutput | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | Should Not BeNullOrEmpty
             
             # Cleanup
@@ -562,7 +563,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should reject invalid Format values" {
             # This should throw a parameter validation error because 'PDF' is not in ValidateSet (parameter binding error)
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" -Hours 1 } | Should Throw
+            # Use Invoke-Expression to ensure parameter binding occurs in the scriptblock
+            { Invoke-Expression 'Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" -Hours 1' } | Should Throw
         }
     }
 }
