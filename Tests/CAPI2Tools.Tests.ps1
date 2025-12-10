@@ -5,13 +5,13 @@
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
-    Updated for v2.8 to include tests for enhanced multi-field search capabilities.
+    Updated for v2.9 to include tests for multi-file export and Format parameter.
     
 .NOTES
-    Version:        1.2
+    Version:        1.3
     Author:         Jan Tiedemann
     Creation Date:  December 2025
-    Last Updated:   December 2025 (v2.8 enhanced search tests added)
+    Last Updated:   December 2025 (v2.9 multi-file export tests added)
     Pester Version: 3.x compatible
     
 .EXAMPLE
@@ -302,7 +302,7 @@ Describe "CAPI2Tools Module" {
         }
     }
     
-    Context "Get-CapiCertificateReport Function (v2.6 Simplified Workflow)" {
+    Context "Get-CapiCertificateReport Function (v2.9 Multi-File Export)" {
         
         It "Should have Name parameter" {
             $Function = Get-Command Get-CapiCertificateReport
@@ -312,6 +312,29 @@ Describe "CAPI2Tools Module" {
         It "Should have ExportPath parameter" {
             $Function = Get-Command Get-CapiCertificateReport
             $Function.Parameters.ContainsKey('ExportPath') | Should Be $true
+        }
+        
+        It "Should have Format parameter with ValidateSet (v2.9 feature)" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $Function.Parameters.ContainsKey('Format') | Should Be $true
+            
+            # Check if it has ValidateSet attribute
+            $ValidateSetAttr = $Function.Parameters['Format'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $ValidateSetAttr | Should Not BeNullOrEmpty
+            
+            # Check valid values
+            $ValidateSetAttr.ValidValues -contains 'HTML' | Should Be $true
+            $ValidateSetAttr.ValidValues -contains 'JSON' | Should Be $true
+            $ValidateSetAttr.ValidValues -contains 'CSV' | Should Be $true
+            $ValidateSetAttr.ValidValues -contains 'XML' | Should Be $true
+        }
+        
+        It "Format parameter should default to HTML" {
+            $Function = Get-Command Get-CapiCertificateReport
+            $DefaultValue = $Function.Parameters['Format'].Attributes | Where-Object { $_.TypeId.Name -eq 'PSDefaultValueAttribute' }
+            # Default is set in param block, check via Get-Help
+            $Help = Get-Help Get-CapiCertificateReport -Parameter Format
+            $Help.defaultValue | Should Be 'HTML'
         }
         
         It "Should have Hours parameter with default value" {
@@ -331,10 +354,9 @@ Describe "CAPI2Tools Module" {
             $Function.Parameters['OpenReport'].SwitchParameter | Should Be $true
         }
         
-        It "ExportPath parameter help should clearly indicate filename requirement" {
+        It "ExportPath parameter help should indicate directory path (v2.9 change)" {
             $Help = Get-Help Get-CapiCertificateReport -Parameter ExportPath
-            $Help.description.Text | Should Match 'filename'
-            $Help.description.Text | Should Match 'extension'
+            $Help.description.Text | Should Match 'directory|Directory|folder'
         }
         
         It "Should accept Name as positional parameter" {
@@ -389,52 +411,62 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
     }
     
-    Context "Simplified Workflow Tests (v2.6 Get-CapiCertificateReport)" {
+    Context "Multi-File Export Tests (v2.9 Get-CapiCertificateReport)" {
         
         It "Should not throw when no events are found" {
             # This simulates the scenario where certificate name doesn't exist in logs
             { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" } | Should Not Throw
         }
         
-        It "Should accept ExportPath with .html extension" {
-            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').html"
+        It "Should accept ExportPath as directory with Format parameter (v2.9)" {
+            $TempDir = Join-Path $env:TEMP "cert_reports_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             # This will search but likely find nothing - we're testing the parameter handling
-            { Get-CapiCertificateReport -Name "test-html-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-dir-export.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue } | Should Not Throw
             
-            # Clean up if file was created
-            if (Test-Path $TempPath) {
-                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            # Clean up if directory was created
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
         
-        It "Should accept ExportPath with .json extension" {
-            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').json"
+        It "Should accept Format parameter with HTML value" {
+            $TempDir = Join-Path $env:TEMP "cert_html_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-json-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue } | Should Not Throw
             
-            if (Test-Path $TempPath) {
-                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
         
-        It "Should accept ExportPath with .csv extension" {
-            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').csv"
+        It "Should accept Format parameter with JSON value" {
+            $TempDir = Join-Path $env:TEMP "cert_json_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-csv-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -ErrorAction SilentlyContinue } | Should Not Throw
             
-            if (Test-Path $TempPath) {
-                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
         
-        It "Should accept ExportPath with .xml extension" {
-            $TempPath = Join-Path $env:TEMP "cert_report_$(Get-Date -Format 'yyyyMMddHHmmss').xml"
+        It "Should accept Format parameter with CSV value" {
+            $TempDir = Join-Path $env:TEMP "cert_csv_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-xml-export.com" -ExportPath $TempPath -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -ErrorAction SilentlyContinue } | Should Not Throw
             
-            if (Test-Path $TempPath) {
-                Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Should accept Format parameter with XML value" {
+            $TempDir = Join-Path $env:TEMP "cert_xml_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
         

@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.8-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.9-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,15 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.8** introduces enhanced search capabilities across multiple certificate and process fields, making it easier to find and correlate events.
+**Version 2.9** introduces multi-file export and simplified format selection, eliminating file overwrite issues when multiple correlation chains are found.
+
+### What's New in v2.9
+
+- 📁 **Multi-File Export**: Each correlation chain exports to a separate file (no more overwrites!)
+- 🎯 **Smart File Naming**: Auto-generated filenames based on certificate name and TaskID (e.g., `microsoft.com_621E9428.html`)
+- 📂 **Directory-Based Export**: Specify output directory instead of full file path
+- ✅ **Format Validation**: New `-Format` parameter with ValidateSet (HTML, JSON, CSV, XML)
+- 🔧 **Simplified Workflow**: `Get-CapiCertificateReport -Name "*.microsoft.com" -ExportPath "C:\Reports" -Format HTML`
 
 ### What's New in v2.8
 
@@ -809,6 +817,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------||
+| 2.9 | December 2025 | Multi-file export (each chain to separate file), smart auto-generated filenames, directory-based ExportPath, Format parameter with ValidateSet, eliminated file overwrite issues |
 | 2.8 | December 2025 | Enhanced multi-field search (SubjectAltName, CN, ProcessName), process-based correlation, simplified usage with automatic field searching, priority-based matching |
 | 2.7 | December 2025 | Fixed correlation chain retrieval with dual mechanism support (chainRef + CorrelationAuxInfo TaskId), fixed error detection XML namespace issues, normalized hex error code handling, enhanced modern CAPI2 event support |
 | 2.6 | December 2025 | Added `Get-CapiCertificateReport` simplified one-command workflow function, improved parameter documentation for ExportPath (now clearly requires filename with extension), enhanced user experience |

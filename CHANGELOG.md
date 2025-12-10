@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.9.0] - 2025-12-10
+
+### Added
+- **Multi-File Export**: `Get-CapiCertificateReport` now exports each correlation chain to a separate file, eliminating overwrite issues
+- **Smart File Naming**: Automatically generates filenames based on certificate subject name and TaskID (e.g., `microsoft.com_621E9428.html`)
+- **Format Parameter**: New `-Format` parameter with ValidateSet attribute (HTML, JSON, CSV, XML) for explicit format selection
+- **Certificate Name Extraction**: Automatically extracts certificate subject from events for intelligent filename generation
+- **Export Summary**: Shows list of all exported files in final summary (with truncation for large result sets)
+
+### Changed
+- **ExportPath Behavior**: Now accepts directory path instead of full file path with extension
+- **Directory Auto-Creation**: Automatically creates export directory if it doesn't exist
+- **Multiple Chain Handling**: All chains are now exported (not just the first one)
+- **File Naming Convention**: Format changed from user-specified to auto-generated: `{CertName}_{ShortTaskID}.{ext}`
+
+### Improved
+- **User Experience**: No more confusion about file extensions or overwritten reports
+- **Validation**: Enhanced parameter validation to ensure ExportPath is a directory, not a file
+- **Error Handling**: Better error messages when directory creation fails
+- **Console Output**: Shows exported filename for each chain during processing
+
+### Breaking Changes
+- **ExportPath Parameter**: No longer accepts file path with extension - must be directory path only
+- **Format Detection**: No longer auto-detects format from file extension - use `-Format` parameter instead
+
+---
+
 ## [2.8.0] - 2025-12-10
 
 ### Added

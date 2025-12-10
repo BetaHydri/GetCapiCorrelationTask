@@ -1502,11 +1502,15 @@ function Get-CapiCertificateReport {
         Supports wildcards for flexible matching.
         
     .PARAMETER ExportPath
-        Full file path including filename and extension for the report.
-        Format is auto-detected from extension: .html, .json, .csv, or .xml
-        Example: "C:\Reports\certificate_report.html" or "./report.json"
-        Required when using -OpenReport switch
-        Must have one of these extensions: .html, .json, .csv, .xml
+        Directory path where reports will be saved. Each correlation chain will be exported to a separate file.
+        File names are automatically generated based on certificate subject name and TaskID.
+        Example: "C:\Reports" or "./reports"
+        If multiple chains are found, files like "microsoft.com_621E9428.html" will be created.
+        
+    .PARAMETER Format
+        Export format for the reports.
+        Valid options: HTML, JSON, CSV, XML
+        Default: HTML
         
     .PARAMETER Hours
         How many hours to look back in the event log (default: 24, max: 8760)
@@ -1525,12 +1529,16 @@ function Get-CapiCertificateReport {
         Search for expired.badssl.com events and display error analysis
         
     .EXAMPLE
-        Get-CapiCertificateReport -Name "microsoft.com" -ExportPath "C:\Reports\microsoft_cert.html"
-        Find microsoft.com events, analyze errors, and export to HTML
+        Get-CapiCertificateReport -Name "microsoft.com" -ExportPath "C:\Reports"
+        Find microsoft.com events, analyze errors, and export to C:\Reports\microsoft.com_<TaskID>.html
         
     .EXAMPLE
-        Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "report.html" -OpenReport
-        Find all contoso.com subdomains, export to HTML, and open in browser
+        Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "C:\Reports" -Format JSON -OpenReport
+        Find all contoso.com subdomains, export each to separate JSON files, and open first report
+        
+    .EXAMPLE
+        Get-CapiCertificateReport -Name "*microsoft.com" -ExportPath "C:\temp" -Hours 5 -ShowDetails -Format HTML
+        Search for microsoft.com in last 5 hours, export all chains to separate HTML files in C:\temp
         
     .EXAMPLE
         Get-CapiCertificateReport -Name "badssl" -Hours 2 -ShowDetails -ExportPath "badssl_errors.json"
@@ -1550,7 +1558,12 @@ function Get-CapiCertificateReport {
           Get-CapiErrorAnalysis -Events $Results[0].Events
           Export-CapiEvents -Events $Results[0].Events -Path "report.html" -Format HTML
         To just:
-          Get-CapiCertificateReport -Name "site.com" -ExportPath "report.html"
+          Get-CapiCertificateReport -Name "site.com" -ExportPath "C:\Reports" -Format HTML
+          
+        When multiple correlation chains are found, each is exported to a separate file:
+          - C:\Reports\site.com_621E9428.html
+          - C:\Reports\site.com_4E61DCEE.html
+          - etc.
     #>
     [CmdletBinding()]
     param(
@@ -1559,8 +1572,11 @@ function Get-CapiCertificateReport {
         
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [ValidatePattern('\.(html|json|csv|xml)$')]
         [string]$ExportPath,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('HTML', 'JSON', 'CSV', 'XML')]
+        [string]$Format = 'HTML',
         
         [Parameter(Mandatory = $false)]
         [ValidateRange(1, 8760)]
@@ -1577,6 +1593,24 @@ function Get-CapiCertificateReport {
     if ($OpenReport -and -not $ExportPath) {
         Write-Error "-OpenReport switch requires -ExportPath to be specified"
         return
+    }
+    
+    # Validate and create export directory if specified
+    if ($ExportPath) {
+        if (-not (Test-Path $ExportPath)) {
+            try {
+                New-Item -ItemType Directory -Path $ExportPath -Force | Out-Null
+                Write-Host "$(Get-DisplayChar 'Info') Created export directory: $ExportPath" -ForegroundColor Gray
+            }
+            catch {
+                Write-Error "Failed to create export directory: $ExportPath. Error: $_"
+                return
+            }
+        }
+        elseif (-not (Test-Path $ExportPath -PathType Container)) {
+            Write-Error "ExportPath must be a directory, not a file: $ExportPath"
+            return
+        }
     }
     
     Write-Host "`n$(Get-DisplayChar 'RightArrow') Searching for certificate events: $Name" -ForegroundColor Cyan
@@ -1600,7 +1634,10 @@ function Get-CapiCertificateReport {
     Write-Host "$(Get-DisplayChar 'CheckmarkBold') Found $($Results.Count) correlation chain(s) matching '$Name'" -ForegroundColor Green
     Write-Host ""
     
-    # Process each chain (usually just one for a specific site)
+    # Track exported files
+    $ExportedFiles = @()
+    
+    # Process each chain
     $ChainNumber = 0
     foreach ($Chain in $Results) {
         $ChainNumber++
@@ -1626,61 +1663,117 @@ function Get-CapiCertificateReport {
         else {
             Write-Host $ErrorCount -ForegroundColor Red
         }
+        
+        # Extract certificate name for filename
+        $CertificateName = "Unknown"
+        try {
+            foreach ($Event in $Chain.Events) {
+                [xml]$EventXml = $Event.DetailedMessage
+                
+                # Try subjectName attribute first
+                $CertNode = $EventXml.SelectSingleNode("//*[@subjectName]")
+                if ($CertNode -and $CertNode.subjectName) {
+                    $CertificateName = $CertNode.subjectName
+                    break
+                }
+                
+                # Try CN element
+                $CNNode = $EventXml.SelectSingleNode("//CN")
+                if ($CNNode -and $CNNode.InnerText) {
+                    $CertificateName = $CNNode.InnerText
+                    break
+                }
+                
+                # Try ProcessName
+                $ProcessNode = $EventXml.SelectSingleNode("//*[@ProcessName]")
+                if ($ProcessNode -and $ProcessNode.ProcessName) {
+                    $CertificateName = $ProcessNode.ProcessName -replace '\.exe$', ''
+                    break
+                }
+            }
+        }
+        catch {
+            # If extraction fails, use search name
+            $CertificateName = $Name -replace '[*?]', ''
+        }
+        
+        # Sanitize certificate name for filename
+        $SafeCertName = $CertificateName -replace '[\\/:*?"<>|]', '_'
+        
+        Write-Host "  Certificate: " -NoNewline -ForegroundColor Gray
+        Write-Host $CertificateName -ForegroundColor White
         Write-Host ""
         
-        # Always show error analysis for the first chain
+        # Always show error analysis for the first chain, or all if ShowDetails
         if ($ChainNumber -eq 1 -or $ShowDetails) {
             Get-CapiErrorAnalysis -Events $Chain.Events -IncludeSummary
         }
         
-        # Export if path provided (only first chain by default)
-        if ($ExportPath -and $ChainNumber -eq 1) {
-            Write-Host "`n$(Get-DisplayChar 'RightArrow') Exporting report..." -ForegroundColor Cyan
+        # Export each chain if path provided
+        if ($ExportPath) {
+            # Get short TaskID (first 8 chars)
+            $ShortTaskID = $Chain.TaskID.ToString().Substring(0, 8)
             
-            # Determine format from extension
-            $Extension = [System.IO.Path]::GetExtension($ExportPath).ToLower()
-            $Format = switch ($Extension) {
-                '.html' { 'HTML' }
-                '.json' { 'JSON' }
-                '.csv' { 'CSV' }
-                '.xml' { 'XML' }
-                default { 'HTML' }  # Default to HTML
+            # Determine file extension
+            $Extension = switch ($Format) {
+                'HTML' { '.html' }
+                'JSON' { '.json' }
+                'CSV' { '.csv' }
+                'XML' { '.xml' }
+                default { '.html' }
             }
             
-            # Add extension if not provided
-            if (-not $Extension) {
-                $ExportPath = "$ExportPath.html"
-                $Format = 'HTML'
-            }
+            # Build filename: CertName_TaskID.ext
+            $FileName = "${SafeCertName}_${ShortTaskID}${Extension}"
+            $FullExportPath = Join-Path $ExportPath $FileName
+            
+            Write-Host "$(Get-DisplayChar 'RightArrow') Exporting to: " -NoNewline -ForegroundColor Cyan
+            Write-Host $FileName -ForegroundColor White
             
             # Export
-            Export-CapiEvents -Events $Chain.Events -Path $ExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
+            Export-CapiEvents -Events $Chain.Events -Path $FullExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
             
-            # Open if requested and it's HTML
-            if ($OpenReport -and $Format -eq 'HTML') {
-                Write-Host "`n$(Get-DisplayChar 'RightArrow') Opening report in browser..." -ForegroundColor Cyan
-                Start-Process $ExportPath
+            $ExportedFiles += $FullExportPath
+            
+            # Open first report if requested and it's HTML
+            if ($OpenReport -and $Format -eq 'HTML' -and $ChainNumber -eq 1) {
+                Write-Host "$(Get-DisplayChar 'RightArrow') Opening report in browser..." -ForegroundColor Cyan
+                Start-Process $FullExportPath
             }
         }
+        
+        Write-Host ""
     }
     
     # Final summary
-    Write-Host "`n═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
     Write-Host "  $(Get-DisplayChar 'CheckmarkBold') Certificate Report Complete" -ForegroundColor Green
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
     
-    if ($ExportPath) {
-        Write-Host "  Report saved to: " -NoNewline -ForegroundColor Gray
+    if ($ExportedFiles.Count -gt 0) {
+        Write-Host "  Exported $($ExportedFiles.Count) report(s) to: " -NoNewline -ForegroundColor Gray
         Write-Host $ExportPath -ForegroundColor White
+        
+        if ($ExportedFiles.Count -le 5) {
+            # Show all files if 5 or fewer
+            foreach ($File in $ExportedFiles) {
+                Write-Host "    - " -NoNewline -ForegroundColor Gray
+                Write-Host ([System.IO.Path]::GetFileName($File)) -ForegroundColor Cyan
+            }
+        }
+        else {
+            # Show first 3 and last 1 if more than 5
+            for ($i = 0; $i -lt 3; $i++) {
+                Write-Host "    - " -NoNewline -ForegroundColor Gray
+                Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[$i])) -ForegroundColor Cyan
+            }
+            Write-Host "    ... and $($ExportedFiles.Count - 4) more files ..." -ForegroundColor Gray
+            Write-Host "    - " -NoNewline -ForegroundColor Gray
+            Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
+        }
     }
     
-    if ($Results.Count -gt 1) {
-        Write-Host "`n  Note: Multiple chains found. Only the first chain was analyzed/exported." -ForegroundColor Yellow
-        Write-Host "        Use Find-CapiEventsByName for advanced multi-chain analysis.`n" -ForegroundColor Gray
-    }
-    else {
-        Write-Host ""
-    }
+    Write-Host ""
 }
 
 #endregion
