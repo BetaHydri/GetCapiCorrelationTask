@@ -513,23 +513,16 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             # Create a file (not directory)
             "test" | Out-File $TempFile
             
-            # This should throw an error
-            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
+            # This should throw an error (remove SilentlyContinue to allow error to propagate)
+            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should Throw
             
             # Cleanup
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
         }
         
         It "Should reject invalid Format values" {
-            $TempDir = Join-Path $env:TEMP "cert_invalid_format_$(Get-Date -Format 'yyyyMMddHHmmss')"
-            
-            # This should throw because 'PDF' is not a valid format
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "PDF" -ErrorAction Stop } | Should Throw
-            
-            # Cleanup
-            if (Test-Path $TempDir) {
-                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
-            }
+            # This should throw a parameter validation error because 'PDF' is not in ValidateSet
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" 2>&1 } | Should Throw
         }
     }
 }
