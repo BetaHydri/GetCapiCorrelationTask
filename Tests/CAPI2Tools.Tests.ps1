@@ -428,14 +428,14 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             }
             
             # Directory should not exist before call
-            Test-Path $TempDir | Should -Be $false
+            Test-Path $TempDir | Should Be $false
             
             # Call with ExportPath - should create directory even if no events found
             Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -Hours 0.01 -ErrorAction SilentlyContinue
             
             # Directory should now exist (created by the function)
-            Test-Path $TempDir | Should -Be $true
-            Test-Path $TempDir -PathType Container | Should -Be $true
+            Test-Path $TempDir | Should Be $true
+            Test-Path $TempDir -PathType Container | Should Be $true
             
             # Clean up
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -448,10 +448,10 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             "test" | Out-File -FilePath $TempFile -Force
             
             # Verify it's a file
-            Test-Path $TempFile -PathType Leaf | Should -Be $true
+            Test-Path $TempFile -PathType Leaf | Should Be $true
             
             # Should throw error when ExportPath is a file
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should -Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
             
             # Clean up
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -501,7 +501,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             # Should throw because 'TXT' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should -Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -538,8 +538,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             Get-CapiCertificateReport -Name "test-autocreate.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue | Out-Null
             
             # Directory should now exist (even if no events were found)
-            Test-Path $TempDir | Should -Be $true
-            (Get-Item $TempDir).PSIsContainer | Should -Be $true
+            Test-Path $TempDir | Should Be $true
+            (Get-Item $TempDir).PSIsContainer | Should Be $true
             
             # Cleanup
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -552,7 +552,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             "test" | Out-File $TempFile
             
             # This should throw an error (remove SilentlyContinue to allow error to propagate)
-            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should -Throw
+            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should Throw
             
             # Cleanup
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -560,7 +560,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should reject invalid Format values" {
             # This should throw a parameter validation error because 'PDF' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" 2>&1 } | Should -Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" 2>&1 } | Should Throw
         }
     }
 }
