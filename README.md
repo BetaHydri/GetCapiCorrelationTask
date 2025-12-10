@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.10.1-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.11.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,17 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.10.1** adds support for Event ID 82 (catalog lookup failures) in error analysis.
+**Version 2.11.0** adds CAPI2 correlation chain event display with AuxInfo sequence numbers.
+
+### What's New in v2.11.0
+
+- 📋 **Event Chain Display**: New `-ShowEventChain` parameter shows all CAPI2 events in correlation order
+- 🔢 **Sequence Numbers**: Events sorted by AuxInfo SequenceNumber for exact chronological order
+- 📊 **Complete Visibility**: See Task Categories (Build Chain, X509 Objects, Verify Chain Policy, etc.)
+- 🎯 **Event IDs**: Display all event IDs (11, 90, 30, 10, etc.) matching Windows Event Viewer
+- 📄 **HTML Reports**: Automatic event chain table in all HTML exports with sequence numbers
+- 🔍 **Better Diagnostics**: Understand the full validation flow from start to finish
+- ⚡ **Performance Guidance**: Added best practices to avoid terminal crashes with broad searches
 
 ### What's New in v2.10.1
 
@@ -672,6 +682,51 @@ Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 
 # Export for documentation
 Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+```
+
+### Example 2a: View Complete CAPI2 Event Chain (NEW in v2.11)
+
+See all events in the correlation chain with their sequence numbers and task categories:
+
+```powershell
+# Find certificate validation chain
+$Results = Find-CapiEventsByName -Name "expired.badssl.com"
+
+# Display with full event chain
+Get-CapiErrorAnalysis -Events $Results[0].Events -ShowEventChain
+
+# Output shows:
+# - Sequence numbers (1, 2, 3, etc.)
+# - Event timestamps
+# - Event levels (Information, Error, Warning)
+# - Event IDs (11, 90, 30, 10, etc.)
+# - Task Categories (Build Chain, X509 Objects, Verify Chain Policy)
+```
+
+**Sample Output:**
+```
+=== CAPI2 Correlation Chain Events ===
+Total events in chain: 9
+Events are sorted by AuxInfo sequence number
+
+Sequence TimeCreated          Level       EventID TaskCategory
+-------- -----------          -----       ------- ------------
+1        10/12/2025 21:05:07  Information 11      Build Chain
+2        10/12/2025 21:05:07  Information 90      X509 Objects
+3        10/12/2025 21:05:07  Information 10      Build Chain
+4        10/12/2025 21:05:07  Information 30      Verify Chain Policy
+5        10/12/2025 21:05:07  Error       30      Verify Chain Policy
+6        10/12/2025 21:05:07  Information 11      Build Chain
+7        10/12/2025 21:05:07  Information 14      Verify Revocation
+8        10/12/2025 21:05:07  Error       11      Build Chain
+9        10/12/2025 21:05:07  Information 70      Certificate Details
+
+=== CAPI2 Error Analysis ===
+Found 2 error(s) in the certificate validation chain.
+[Critical] CERT_E_EXPIRED - 0x800B0101
+  Certificate:   expired.badssl.com
+  Thumbprint:    A1B2C3D4E5F6...
+  Description:   Certificate has expired or is not yet valid
 ```
 
 ### Example 3: Pipeline Processing with Filtering (Advanced)

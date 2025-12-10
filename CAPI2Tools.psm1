@@ -855,13 +855,13 @@ function Find-CapiEventsByName {
         # Map FilterType to actual search patterns
         if ($FilterType) {
             $IncludePattern = switch ($FilterType) {
-                'Revocation'          { '*revocation*' }
-                'Expired'             { '*expired*' }
-                'Untrusted'           { '*untrusted*' }
-                'ChainBuilding'       { '*CertGetCertificateChain*' }
-                'PolicyValidation'    { '*CertVerifyCertificateChainPolicy*' }
+                'Revocation' { '*revocation*' }
+                'Expired' { '*expired*' }
+                'Untrusted' { '*untrusted*' }
+                'ChainBuilding' { '*CertGetCertificateChain*' }
+                'PolicyValidation' { '*CertVerifyCertificateChainPolicy*' }
                 'SignatureValidation' { '*signature*' }
-                'ErrorsOnly'          { '*<Result value=*' }
+                'ErrorsOnly' { '*<Result value=*' }
             }
             Write-Verbose "FilterType '$FilterType' mapped to pattern: $IncludePattern"
         }
@@ -1298,7 +1298,7 @@ function Get-EventChainSummary {
     }
     
     # Sort by sequence number if available, otherwise by time
-    $ChainSummary = $ChainSummary | Sort-Object -Property @{Expression={if ($_.Sequence) {$_.Sequence} else {999999}}}, TimeCreated
+    $ChainSummary = $ChainSummary | Sort-Object -Property @{Expression = { if ($_.Sequence) { $_.Sequence } else { 999999 } } }, TimeCreated
     
     return $ChainSummary
 }
@@ -1458,7 +1458,8 @@ function Get-CapiErrorAnalysis {
             if ($ShowEventChain) {
                 Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
                 Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
-            } else {
+            }
+            else {
                 Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
                 Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
             }
@@ -1673,9 +1674,9 @@ function Export-CapiEvents {
                         # Filter out non-informative errors (same logic as HTML)
                         $FilteredErrors = $ErrorAnalysis | Where-Object {
                             -not ($_.Certificate -eq "(not available)" -and 
-                                  $_.Thumbprint -eq "(not available)" -and
-                                  (-not $_.TrustStatus -or 
-                                   ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
+                                $_.Thumbprint -eq "(not available)" -and
+                                (-not $_.TrustStatus -or 
+                                ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
                         }
                         
                         $JsonData['ErrorAnalysis'] = $FilteredErrors
@@ -1697,9 +1698,9 @@ function Export-CapiEvents {
                         # Filter out non-informative errors (same logic as HTML/JSON)
                         $FilteredErrors = $ErrorAnalysis | Where-Object {
                             -not ($_.Certificate -eq "(not available)" -and 
-                                  $_.Thumbprint -eq "(not available)" -and
-                                  (-not $_.TrustStatus -or 
-                                   ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
+                                $_.Thumbprint -eq "(not available)" -and
+                                (-not $_.TrustStatus -or 
+                                ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
                         }
                         
                         $XmlData['ErrorAnalysis'] = $FilteredErrors
@@ -1774,18 +1775,18 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                                 # Skip errors without useful information
                                 # Check if certificate is missing or placeholder
                                 $HasNoCert = (-not $ErrorEntry.Certificate) -or 
-                                            ($ErrorEntry.Certificate -eq "(not available)") -or
-                                            ($ErrorEntry.Certificate -eq "")
+                                ($ErrorEntry.Certificate -eq "(not available)") -or
+                                ($ErrorEntry.Certificate -eq "")
                                             
                                 # Check if thumbprint is missing or placeholder  
                                 $HasNoThumb = (-not $ErrorEntry.Thumbprint) -or
-                                             ($ErrorEntry.Thumbprint -eq "(not available)") -or
-                                             ($ErrorEntry.Thumbprint -eq "")
+                                ($ErrorEntry.Thumbprint -eq "(not available)") -or
+                                ($ErrorEntry.Thumbprint -eq "")
                                              
                                 # Check if TrustStatus has useful data
                                 $HasNoTrust = (-not $ErrorEntry.TrustStatus) -or
-                                             (($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0) -and 
-                                              ($ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))
+                                (($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0) -and 
+                                ($ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))
                                 
                                 # Skip if ALL three are empty/useless
                                 if ($HasNoCert -and $HasNoThumb -and $HasNoTrust) {
@@ -1825,13 +1826,15 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                                 # Format Certificate and Thumbprint for display
                                 $CertDisplay = if ($ErrorEntry.Certificate -and $ErrorEntry.Certificate -ne "(not available)") { 
                                     $ErrorEntry.Certificate 
-                                } else { 
+                                }
+                                else { 
                                     "<span style='color: #999; font-style: italic;'>Not available</span>" 
                                 }
                                 
                                 $ThumbprintDisplay = if ($ErrorEntry.Thumbprint -and $ErrorEntry.Thumbprint -ne "(not available)") { 
                                     $ErrorEntry.Thumbprint 
-                                } else { 
+                                }
+                                else { 
                                     "<span style='color: #999; font-style: italic;'>N/A</span>" 
                                 }
                                 
