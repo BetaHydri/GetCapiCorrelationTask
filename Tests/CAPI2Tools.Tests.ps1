@@ -415,7 +415,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should not throw when no events are found" {
             # This simulates the scenario where certificate name doesn't exist in logs
-            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ErrorAction SilentlyContinue } | Should Not Throw
+            # Use MaxEvents to speed up the test
+            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should create export directory if it doesn't exist (v2.9 feature)" {
@@ -427,14 +428,14 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             }
             
             # Directory should not exist before call
-            Test-Path $TempDir | Should Be $false
+            Test-Path $TempDir | Should -Be $false
             
             # Call with ExportPath - should create directory even if no events found
             Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue
             
             # Directory should now exist (created by the function)
-            Test-Path $TempDir | Should Be $true
-            Test-Path $TempDir -PathType Container | Should Be $true
+            Test-Path $TempDir | Should -Be $true
+            Test-Path $TempDir -PathType Container | Should -Be $true
             
             # Clean up
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -447,10 +448,10 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             "test" | Out-File -FilePath $TempFile -Force
             
             # Verify it's a file
-            Test-Path $TempFile -PathType Leaf | Should Be $true
+            Test-Path $TempFile -PathType Leaf | Should -Be $true
             
             # Should throw error when ExportPath is a file
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should -Throw
             
             # Clean up
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -459,7 +460,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with HTML value" {
             $TempDir = Join-Path $env:TEMP "cert_html_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-html.com" -ExportPath $TempDir -Format HTML -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -469,7 +470,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with JSON value" {
             $TempDir = Join-Path $env:TEMP "cert_json_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-json.com" -ExportPath $TempDir -Format JSON -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -479,7 +480,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with CSV value" {
             $TempDir = Join-Path $env:TEMP "cert_csv_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-csv.com" -ExportPath $TempDir -Format CSV -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -489,7 +490,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         It "Should accept Format parameter with XML value" {
             $TempDir = Join-Path $env:TEMP "cert_xml_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -500,7 +501,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             # Should throw because 'TXT' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should -Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -508,17 +509,17 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         }
         
         It "Should accept Hours parameter" {
-            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 48 -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-hours.com" -Hours 1 -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should accept ShowDetails switch" {
-            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-details.com" -ShowDetails -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
         It "Should accept all parameters together" {
             $TempDir = Join-Path $env:TEMP "cert_full_test_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 24 -ShowDetails -ErrorAction SilentlyContinue } | Should Not Throw
+            { Get-CapiCertificateReport -Name "test-all-params.com" -ExportPath $TempDir -Format HTML -Hours 1 -ShowDetails -MaxEvents 10 -ErrorAction SilentlyContinue } | Should Not Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -537,8 +538,8 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             Get-CapiCertificateReport -Name "test-autocreate.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue | Out-Null
             
             # Directory should now exist (even if no events were found)
-            Test-Path $TempDir | Should Be $true
-            (Get-Item $TempDir).PSIsContainer | Should Be $true
+            Test-Path $TempDir | Should -Be $true
+            (Get-Item $TempDir).PSIsContainer | Should -Be $true
             
             # Cleanup
             Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -551,7 +552,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             "test" | Out-File $TempFile
             
             # This should throw an error (remove SilentlyContinue to allow error to propagate)
-            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should Throw
+            { Get-CapiCertificateReport -Name "test-file-path.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop 2>&1 } | Should -Throw
             
             # Cleanup
             Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
@@ -559,7 +560,7 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should reject invalid Format values" {
             # This should throw a parameter validation error because 'PDF' is not in ValidateSet
-            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\temp" -Format "PDF" 2>&1 } | Should Throw
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath "C:\\temp" -Format "PDF" 2>&1 } | Should -Throw
         }
     }
 }
