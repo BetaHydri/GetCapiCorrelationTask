@@ -1321,9 +1321,9 @@ function Get-CapiErrorAnalysis {
                     $ErrorDetails = Get-CAPI2ErrorDetails -ErrorCode $ErrorValue
                     
                     # Extract certificate information
-                    $CertSubject = ""
+                    $CertSubject = "(not available)"
                     $CertIssuer = ""
-                    $CertThumbprint = ""
+                    $CertThumbprint = "(not available)"
                     
                     $CertNode = $EventXml.SelectSingleNode("//Certificate[@subjectName]")
                     if ($CertNode) {
