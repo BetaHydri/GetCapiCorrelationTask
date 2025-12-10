@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.0] - 2025-12-10
+
+### Fixed
+- **Critical Bug**: Fixed correlation chain retrieval - now properly uses BOTH chainRef and CorrelationAuxInfo TaskId for complete event chains
+- **Error Detection**: Corrected XML namespace handling in `Get-CapiErrorAnalysis` - removed incorrect `<root>` wrapper that broke XPath queries
+- **Error Code Normalization**: Enhanced `Get-CAPI2ErrorDetails` to handle hex codes without "0x" prefix (e.g., "800B0101" → "0x800B0101")
+- **XPath Queries**: Updated to use `local-name()` function for namespace-agnostic XML element selection
+
+### Changed
+- **Correlation Mechanism**: `Get-CapiTaskIDEvents` now implements dual correlation strategy:
+  1. First searches by chainRef (for certificate chain events: IDs 11, 30, 81)
+  2. Then extracts CorrelationAuxInfo TaskId to retrieve full workflow (IDs 10, 11, 30, 40, 41, 50, 51, 80, 81, 90)
+  3. Falls back to direct TaskId search for legacy events
+- **Event Retrieval**: Modern Windows CAPI2 logging behavior now properly supported (typically 3-4 events for simple validations, 8+ for complex workflows)
+- **XPath Expressions**: Updated correlation queries to support both modern chainRef attributes and legacy CorrelationAuxInfo structure
+
+### Added
+- **Better Error Reporting**: Error analysis now correctly identifies certificate expiration (CERT_E_EXPIRED), untrusted roots (CERT_E_UNTRUSTEDROOT), and name mismatches (CERT_E_CN_NO_MATCH)
+- **Validation**: Comprehensive testing with badssl.com scenarios (expired, self-signed, wrong-host certificates)
+
+---
+
 ## [2.5.0] - 2025-12-10
 
 ### Added
