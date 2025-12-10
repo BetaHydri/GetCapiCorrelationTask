@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.11.0] - 2025-12-10
+
+### Added
+- **CAPI2 Correlation Chain Event Display**: New `-ShowEventChain` parameter for `Get-CapiErrorAnalysis`
+  - Displays all events in correlation chain with sequence numbers, timestamps, levels, Event IDs, and Task Categories
+  - Events sorted by AuxInfo SequenceNumber for exact chronological order
+  - Shows Task Categories: Build Chain, X509 Objects, Verify Chain Policy, Verify Revocation, Certificate Details, etc.
+  - Matches Event Viewer display (Event IDs 11, 90, 30, 10, 14, 70, etc.)
+- **Get-EventChainSummary Function**: New helper function to extract and format event chain information
+  - Parses AuxInfo XML elements for SequenceNumber
+  - Creates structured summary with Sequence, TimeCreated, Level, EventID, TaskCategory
+  - Automatic sorting by sequence number or timestamp fallback
+- **HTML Report Enhancement**: Automatic event chain table in all HTML exports
+  - New section: "📋 CAPI2 Correlation Chain Events"
+  - Color-coded by event level (Error=red, Warning=yellow, Information=normal)
+  - Sequence numbers displayed in dedicated column
+  - Always included when using `-IncludeErrorAnalysis` or via `Get-CapiCertificateReport`
+- **Performance Documentation**: Added "Performance Issues & Terminal Crashes" troubleshooting section
+  - Best practices for avoiding broad searches that return 200+ chains
+  - Safe usage patterns with specific examples (❌ BAD vs ✅ GOOD)
+  - Tips for using FilterType, Select-Object, and time ranges effectively
+
+### Improved
+- **Event Analysis Workflow**: Complete visibility into certificate validation flow from start to finish
+- **Diagnostic Capability**: See exact sequence of CAPI2 operations leading to errors
+- **Report Quality**: HTML reports now show complete event context alongside error analysis
+- **User Guidance**: Better documentation on avoiding terminal performance issues with large result sets
+
+### Documentation
+- Added Example 2a showcasing `-ShowEventChain` with sample output
+- Updated function reference with ShowEventChain parameter details
+- Added event chain output format examples
+- Enhanced troubleshooting section with performance best practices
+
+---
+
 ## [2.10.1] - 2025-12-10
 
 ### Added
