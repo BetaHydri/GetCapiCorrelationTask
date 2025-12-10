@@ -46,6 +46,39 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 
 **Version 2.12.0** adds X.509 certificate information display from Event 90, showing DNS SANs, UPNs, and certificate details at the top of each correlation report.
 
+### Understanding CAPI2 Event Correlation
+
+CAPI2 uses a **two-level correlation system** to link related events:
+
+#### 1️⃣ **chainRef** - Certificate Chain Identifier
+- **Purpose**: Links events for the **same certificate chain** (same physical certificates)
+- **Scope**: Multiple validation attempts of the same certificate
+- **Use Case**: Analyzing certificate reuse patterns across different validation operations
+- **Limitation**: Can mix events from different validation attempts together
+
+#### 2️⃣ **CorrelationAuxInfo TaskId** - Validation Operation Identifier ✅ **RECOMMENDED**
+- **Purpose**: Links events for a **specific validation operation**
+- **Scope**: Single validation attempt with unique chronological ordering
+- **Use Case**: Troubleshooting specific certificate validation failures
+- **Advantage**: Provides accurate sequence numbers (1, 2, 3...) via `SeqNumber` attribute
+
+**📌 Best Practice**: This toolkit uses **TaskId-based correlation** by default, ensuring each correlation chain represents a single validation operation with correct chronological ordering. This is the recommended approach for troubleshooting certificate issues.
+
+**Example Scenario**:
+```
+Same certificate validated 3 times:
+┌─────────────────────────────────────────────────┐
+│ chainRef: {2F129E54-6A14-43CC-BF14-841FED3F18FD}│ ← Same for all
+│                                                 │
+│ Validation 1: TaskId {09E9E471...} Seq 1,2,3   │
+│ Validation 2: TaskId {369F9629...} Seq 1,2,3   │
+│ Validation 3: TaskId {68D4D2FD...} Seq 1,2,3   │
+└─────────────────────────────────────────────────┘
+```
+
+Using **chainRef** would mix all 9 events together with duplicate sequence numbers.  
+Using **TaskId** gives you 3 separate chains with correct sequences (1,2,3 for each).
+
 ### What's New in v2.12.0
 
 - 📜 **X.509 Certificate Information**: Event 90 (X509 Objects) now displays detailed certificate information at the top of reports
@@ -738,7 +771,81 @@ Find-CapiEventsByName -Name "*" -Hours 48 -FilterType PolicyValidation |
 - 🤖 Automation scenarios where you need to process each chain individually
 - 📈 Generating separate reports for each correlation chain found
 
-### Example 4: Track Fix Progress (Advanced)
+### Example 4: View X.509 Certificate Information (NEW in v2.12.0)
+
+Display detailed certificate information including Subject Alternative Names (SANs), DNS names, UPNs, and validity periods:
+
+```powershell
+# View certificate information for a specific site
+Find-CapiEventsByName -Name "github.com" | Get-CapiErrorAnalysis -ShowEventChain
+
+# Output shows certificate details at the top:
+```
+
+**Sample Output with X.509 Certificate Information:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║           Certificate Information (Event 90)                  ║
+╚═══════════════════════════════════════════════════════════════╝
+  Subject CN:      *.github.com
+  Organization:    GitHub, Inc.
+  Country:         US
+  Issued By:       DigiCert TLS Hybrid ECC SHA384 2020 CA1
+  SANs:            DNS: *.github.com
+                   DNS: github.com
+                   DNS: *.github.io
+                   DNS: github.io
+  Serial:          0A1B2C3D4E5F60718293A4B5C6D7E8F9
+  Valid:           ✅ 2024-03-15 to 2025-03-15 (Valid)
+
+=== CAPI2 Correlation Chain Events ===
+Total events in chain: 7
+Events are sorted by AuxInfo sequence number
+
+Sequence TimeCreated          Level       EventID TaskCategory
+-------- -----------          -----       ------- ------------
+1        12/10/2025 14:23:11  Information 11      Build Chain
+2        12/10/2025 14:23:11  Information 90      X509 Objects
+3        12/10/2025 14:23:11  Information 30      Verify Chain Policy
+...
+```
+
+**Features Demonstrated:**
+- 📜 **Complete Certificate Details**: Subject CN, Organization, Country, Issuer
+- 🌐 **Subject Alternative Names**: All DNS names, UPNs, and email addresses
+- 🎯 **Smart Certificate Selection**: Automatically shows end-entity cert (not CA certs)
+- ✅ **Validity Indicators**: Visual status (✅ Valid / ⚠️ Not Yet Valid / ❌ Expired)
+- 🔍 **Serial Numbers**: Full certificate serial number for identification
+- 📊 **HTML Reports**: Certificate info automatically included in all HTML exports
+
+**Additional Examples:**
+
+```powershell
+# View certificate for Microsoft services
+Find-CapiEventsByName -Name "*.microsoft.com" | Get-CapiErrorAnalysis -ShowEventChain
+
+# Export HTML report with certificate information
+Get-CapiCertificateReport -Name "*.azure.com" -ExportPath "C:\Reports"
+
+# Check certificate validity for internal sites
+Find-CapiEventsByName -Name "*.contoso.local" -Hours 48 | Get-CapiErrorAnalysis -ShowEventChain
+
+# View user certificate with UPN information
+Find-CapiEventsByName -Name "user@domain.com" | Get-CapiErrorAnalysis -ShowEventChain
+# Shows UPN SANs like: UPN: user@domain.com, UPN: user@alt-domain.com
+```
+
+**Use Cases:**
+- 🔍 Verify certificate contains correct DNS names (CN and SANs)
+- 🎯 Check certificate validity period and expiration dates
+- 📋 Document certificate details for compliance audits
+- 🔐 Verify issuer information for trust validation
+- 🌐 Review Subject Alternative Names for multi-domain certificates
+- 👤 Check UPNs for user authentication certificates
+
+**Note**: Event 90 (X509 Objects) is not always generated - it depends on the application and validation type. If Event 90 is missing, certificate information will not be displayed, but the event chain and error analysis will still be shown.
+
+### Example 5: Track Fix Progress (Advanced)
 
 ```powershell
 # Capture baseline
