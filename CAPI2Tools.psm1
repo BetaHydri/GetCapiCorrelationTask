@@ -1763,7 +1763,7 @@ function Get-CapiCertificateReport {
             }
             Write-Host "    ... and $($ExportedFiles.Count - 4) more files ..." -ForegroundColor Gray
             Write-Host "    - " -NoNewline -ForegroundColor Gray
-                Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
+            Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
         }
         
         # Open Explorer to show the reports directory if requested
