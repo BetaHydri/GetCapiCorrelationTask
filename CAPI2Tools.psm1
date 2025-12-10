@@ -1344,19 +1344,23 @@ function Get-CapiCertificateReport {
         DNS name, certificate subject, or issuer to search for (supports wildcards)
         
     .PARAMETER ExportPath
-        Optional full file path including filename and extension for the report.
+        Full file path including filename and extension for the report.
         Format is auto-detected from extension: .html, .json, .csv, or .xml
         Example: "C:\Reports\certificate_report.html" or "./report.json"
-        If not specified, results are displayed on console only
+        Required when using -OpenReport switch
+        Must have one of these extensions: .html, .json, .csv, .xml
         
     .PARAMETER Hours
-        How many hours to look back in the event log (default: 24)
+        How many hours to look back in the event log (default: 24, max: 8760)
+        Valid range: 1 to 8760 hours (1 year)
         
     .PARAMETER ShowDetails
         Display detailed error information in the console (in addition to any export)
         
     .PARAMETER OpenReport
         Automatically open the exported HTML report in default browser
+        Requires -ExportPath to be specified
+        Only works with HTML files (.html extension)
         
     .EXAMPLE
         Get-CapiCertificateReport -Name "expired.badssl.com"
@@ -1382,21 +1386,31 @@ function Get-CapiCertificateReport {
         To just:
           Get-CapiCertificateReport -Name "site.com" -ExportPath "report.html"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ConsoleOnly')]
     param(
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ConsoleOnly')]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'Export')]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ExportAndOpen')]
         [string]$Name,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'Export')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ExportAndOpen')]
+        [ValidateNotNullOrEmpty()]
+        [ValidatePattern('\.(html|json|csv|xml)$')]
         [string]$ExportPath,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ConsoleOnly')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Export')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
+        [ValidateRange(1, 8760)]
         [int]$Hours = 24,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ConsoleOnly')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Export')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
         [switch]$ShowDetails,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = 'ExportAndOpen')]
         [switch]$OpenReport
     )
     
