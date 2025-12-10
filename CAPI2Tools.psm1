@@ -1451,14 +1451,14 @@ function Export-CapiEvents {
         
     .EXAMPLE
         $Events = Get-CapiTaskIDEvents -TaskID "12345..."
-        Export-CapiEvents -Events $Events -Path "C:\Reports\CAPI_Analysis.csv"
+        Export-CapiEvents -Events $Events -Path "C:\Reports" -Format CSV -TaskID "12345..."
         
     .EXAMPLE
         $Results = Find-CapiEventsByName -Name "contoso.com"
-        Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_chain.html" -IncludeErrorAnalysis
+        Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
         
     .EXAMPLE
-        Export-CapiEvents -Events $Events -Path "C:\Reports\events.json" -Format JSON
+        Export-CapiEvents -Events $Events -Path "C:\Reports" -Format JSON -TaskID "12345..."
     #>
     [CmdletBinding()]
     param(
@@ -1911,7 +1911,7 @@ function Get-CapiCertificateReport {
         This is the recommended function for most users. It simplifies the workflow from:
           $Results = Find-CapiEventsByName -Name "site.com"
           Get-CapiErrorAnalysis -Events $Results[0].Events
-          Export-CapiEvents -Events $Results[0].Events -Path "report.html" -Format HTML
+          Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -TaskID $Results[0].TaskID
         To just:
           Get-CapiCertificateReport -Name "site.com" -ExportPath "C:\Reports" -Format HTML
           
@@ -2356,8 +2356,8 @@ Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Conve
     Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
     
     # Export to various formats
-    Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_analysis.html" -IncludeErrorAnalysis
-    Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\events.json"
+    Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+    Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format JSON -TaskID $Results[0].TaskID
     
     # Compare before/after fixing
     $Before = Get-CapiTaskIDEvents -TaskID "GUID-BEFORE"

@@ -178,7 +178,7 @@ Get-CAPI2EventLogStatus
 # Analyze and export
 $Events = Find-CertEvents -Name "example.com"
 Get-CapiErrorAnalysis -Events $Events[0].Events
-Export-CapiEvents -Events $Events[0].Events -Path "report.html" -Format HTML
+Export-CapiEvents -Events $Events[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Events[0].TaskID
 ```
 
 ---
@@ -280,7 +280,7 @@ $Results = Find-CapiEventsByName -Name "yoursite.com"
 Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 
 # 6. Export for documentation
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_issue.html" -IncludeErrorAnalysis
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 
 # 7. After fixing the issue, compare results
 $After = Find-CapiEventsByName -Name "yoursite.com"
@@ -391,16 +391,16 @@ Export events to multiple formats:
 
 ```powershell
 # Export to CSV
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\events.csv"
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format CSV -TaskID $Results[0].TaskID
 
 # Export to JSON with error analysis
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\analysis.json" -IncludeErrorAnalysis
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format JSON -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 
 # Export to HTML report (recommended for documentation)
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\cert_report.html" -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 
 # Export to XML
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\events.xml"
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format XML -TaskID $Results[0].TaskID
 ```
 
 The HTML export creates a beautiful, color-coded report with:
@@ -587,7 +587,7 @@ Get-CapiCertificateReport -Name "problematic-site.com" -Hours 2 -ShowDetails
 ```powershell
 $Results = Find-CapiEventsByName -Name "expired.badssl.com"
 Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
-Export-CapiEvents -Events $Results[0].Events -Path "report.html" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 ```
 
 **Now just one line:**
@@ -609,7 +609,7 @@ $Results = Find-CapiEventsByName -Name "problematic-site.com"
 Get-CapiErrorAnalysis -Events $Results[0].Events -IncludeSummary
 
 # Export for documentation
-Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports\issue_report.html" -IncludeErrorAnalysis
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Results[0].TaskID
 ```
 
 ### Example 4: Track Fix Progress (Advanced)
@@ -644,21 +644,27 @@ $CriticalErrors | Format-Table ErrorName, Certificate, Resolution -Wrap
 ### Example 6: Bulk Analysis and Reporting
 
 ```powershell
-# ⭐ Simplified approach
+# ⭐ Simplified approach - exports each chain to separate file
 $Sites = @("site1.com", "site2.com", "site3.com")
 foreach ($Site in $Sites) {
-    Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports\$($Site)_report.html" -Hours 168
+    Get-CapiCertificateReport -Name $Site -ExportPath "C:\Reports" -Format HTML -Hours 168
 }
 
-# Advanced approach with more control
+# Advanced approach with more control - single file per site
 $Sites = @("site1.com", "site2.com", "site3.com")
 foreach ($Site in $Sites) {
     $Results = Find-CapiEventsByName -Name $Site -Hours 168
     
     if ($Results) {
-        $OutputPath = "C:\Reports\$($Site)_analysis.html"
-        Export-CapiEvents -Events $Results[0].Events -Path $OutputPath -IncludeErrorAnalysis
-        Write-Host "✓ Exported $Site analysis to $OutputPath" -ForegroundColor Green
+        # Process each correlation chain for this site
+        foreach ($Result in $Results) {
+            $SafeSiteName = $Site -replace '[\\/:*?"<>|]', '_'
+            $ShortTaskID = $Result.TaskID.Substring(0, 8)
+            $OutputFile = "$SafeSiteName`_$ShortTaskID.html"
+            
+            Export-CapiEvents -Events $Result.Events -Path "C:\Reports\$OutputFile" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
+            Write-Host "✓ Exported $Site analysis to $OutputFile" -ForegroundColor Green
+        }
     }
 }
 ```
@@ -706,7 +712,7 @@ foreach ($Result in $Results) {
     # Export to separate file
     if ($ErrorAnalysis) {
         $FileName = "microsoft_$($Result.TaskID.Substring(0,8)).html"
-        Export-CapiEvents -Events $Events -Path "C:\Reports\$FileName" -IncludeErrorAnalysis -TaskID $Result.TaskID
+        Export-CapiEvents -Events $Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
         Write-Host "Exported: $FileName" -ForegroundColor Green
     }
 }
