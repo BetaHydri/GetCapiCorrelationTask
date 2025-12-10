@@ -117,12 +117,12 @@ Describe "CAPI2Tools Module" {
         # These tests verify the function exists in the module scope
         
         It "Should have Get-DisplayChar function defined in module" {
-            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Get-DisplayChar -ErrorAction SilentlyContinue })
+            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -Name Get-DisplayChar -ErrorAction SilentlyContinue })
             $ModuleFunctions | Should -Not -BeNullOrEmpty
         }
         
         It "Should have Write-BoxHeader function defined in module" {
-            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -name Write-BoxHeader -ErrorAction SilentlyContinue })
+            $ModuleFunctions = (Get-Module CAPI2Tools).Invoke({ Get-Command -Type Function -Name Write-BoxHeader -ErrorAction SilentlyContinue })
             $ModuleFunctions | Should -Not -BeNullOrEmpty
         }
     }
