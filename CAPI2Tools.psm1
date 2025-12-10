@@ -1579,7 +1579,7 @@ function Export-CapiEvents {
                 }
             },
             @{N = 'Certificate'; E = {
-                    if ($_.DetailedMessage -match 'subjectName="([^"]+)"') { $matches[1] } else { '' }
+                    if ($_.DetailedMessage -match 'subjectName="([^"]+)"') { $matches[1] } else { $null }
                 }
             },
             @{N = 'Details'; E = { $_.DetailedMessage } }
@@ -1598,7 +1598,17 @@ function Export-CapiEvents {
                     
                     if ($IncludeErrorAnalysis) {
                         $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
-                        $JsonData['ErrorAnalysis'] = $ErrorAnalysis
+                        
+                        # Filter out non-informative errors (same logic as HTML)
+                        $FilteredErrors = $ErrorAnalysis | Where-Object {
+                            -not ($_.Certificate -eq "(not available)" -and 
+                                  $_.Thumbprint -eq "(not available)" -and
+                                  (-not $_.TrustStatus -or 
+                                   ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
+                        }
+                        
+                        $JsonData['ErrorAnalysis'] = $FilteredErrors
+                        $JsonData['ErrorCount'] = $FilteredErrors.Count
                     }
                     
                     $JsonData | ConvertTo-Json -Depth 10 | Out-File -FilePath $Path -Encoding UTF8
@@ -1608,6 +1618,21 @@ function Export-CapiEvents {
                         TaskID     = $TaskID
                         ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
                         Events     = $ExportData
+                    }
+                    
+                    if ($IncludeErrorAnalysis) {
+                        $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
+                        
+                        # Filter out non-informative errors (same logic as HTML/JSON)
+                        $FilteredErrors = $ErrorAnalysis | Where-Object {
+                            -not ($_.Certificate -eq "(not available)" -and 
+                                  $_.Thumbprint -eq "(not available)" -and
+                                  (-not $_.TrustStatus -or 
+                                   ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
+                        }
+                        
+                        $XmlData['ErrorAnalysis'] = $FilteredErrors
+                        $XmlData['ErrorCount'] = $FilteredErrors.Count
                     }
                     
                     $XmlData | Export-Clixml -Path $Path
@@ -1675,6 +1700,14 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
     <tbody>
 "@
                             foreach ($ErrorEntry in $ErrorAnalysis) {
+                                # Skip errors without certificate information (not useful in report)
+                                if ($ErrorEntry.Certificate -eq "(not available)" -and 
+                                    $ErrorEntry.Thumbprint -eq "(not available)" -and
+                                    (-not $ErrorEntry.TrustStatus -or 
+                                     ($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0 -and $ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))) {
+                                    continue
+                                }
+                                
                                 $SeverityClass = switch ($ErrorEntry.Severity) {
                                     'Critical' { 'error' }
                                     'Error' { 'error' }
