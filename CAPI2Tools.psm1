@@ -1600,7 +1600,7 @@ function Get-CapiCertificateReport {
         if (-not (Test-Path $ExportPath)) {
             try {
                 New-Item -ItemType Directory -Path $ExportPath -Force | Out-Null
-                Write-Host "$(Get-DisplayChar 'Info') Created export directory: $ExportPath" -ForegroundColor Gray
+                Write-Host "$(Get-DisplayChar 'Lightbulb') Created export directory: $ExportPath" -ForegroundColor Gray
             }
             catch {
                 Write-Error "Failed to create export directory: $ExportPath. Error: $_"
