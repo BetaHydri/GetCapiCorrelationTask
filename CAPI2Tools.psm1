@@ -1518,16 +1518,53 @@ function Export-CapiEvents {
     )
     
     begin {
-        # Determine format from file extension if not specified
+        # Determine if Path is a directory or file
+        $IsDirectory = $false
+        if (Test-Path -Path $Path -PathType Container) {
+            $IsDirectory = $true
+        }
+        elseif (-not [System.IO.Path]::HasExtension($Path)) {
+            # Path doesn't exist and has no extension, treat as directory
+            $IsDirectory = $true
+        }
+        
+        # Determine format
         if (-not $Format) {
-            $Extension = [System.IO.Path]::GetExtension($Path).ToLower()
-            $Format = switch ($Extension) {
-                '.csv' { 'CSV' }
-                '.json' { 'JSON' }
-                '.html' { 'HTML' }
-                '.xml' { 'XML' }
-                default { 'CSV' }
+            if ($IsDirectory) {
+                # Default to HTML if directory specified
+                $Format = 'HTML'
             }
+            else {
+                # Determine from file extension
+                $Extension = [System.IO.Path]::GetExtension($Path).ToLower()
+                $Format = switch ($Extension) {
+                    '.csv' { 'CSV' }
+                    '.json' { 'JSON' }
+                    '.html' { 'HTML' }
+                    '.xml' { 'XML' }
+                    default { 'CSV' }
+                }
+            }
+        }
+        
+        # Construct filename if Path is a directory
+        if ($IsDirectory) {
+            # Create directory if it doesn't exist
+            if (-not (Test-Path $Path)) {
+                New-Item -Path $Path -ItemType Directory -Force | Out-Null
+            }
+            
+            # Build filename: CapiEvents_<ShortTaskID>.<extension>
+            $ShortTaskID = if ($TaskID) { $TaskID.Substring(0, 8) } else { (Get-Date -Format 'yyyyMMdd_HHmmss') }
+            $Extension = switch ($Format) {
+                'CSV' { 'csv' }
+                'JSON' { 'json' }
+                'HTML' { 'html' }
+                'XML' { 'xml' }
+                default { 'txt' }
+            }
+            $FileName = "CapiEvents_$ShortTaskID.$Extension"
+            $Path = Join-Path $Path $FileName
         }
         
         Write-Host "Exporting $($Events.Count) event(s) to $Format format..." -ForegroundColor Cyan
@@ -1667,13 +1704,26 @@ $(if ($CertificateName) { "        <div class='cert-name'>Certificate: $Certific
                                     $TrustHtml = "<span style='color: #999;'>No chain details</span>"
                                 }
                                 
+                                # Format Certificate and Thumbprint for display
+                                $CertDisplay = if ($ErrorEntry.Certificate -and $ErrorEntry.Certificate -ne "(not available)") { 
+                                    $ErrorEntry.Certificate 
+                                } else { 
+                                    "<span style='color: #999; font-style: italic;'>Not available</span>" 
+                                }
+                                
+                                $ThumbprintDisplay = if ($ErrorEntry.Thumbprint -and $ErrorEntry.Thumbprint -ne "(not available)") { 
+                                    $ErrorEntry.Thumbprint 
+                                } else { 
+                                    "<span style='color: #999; font-style: italic;'>N/A</span>" 
+                                }
+                                
                                 $HtmlReport += @"
         <tr>
             <td class='timestamp'>$($ErrorEntry.TimeCreated)</td>
             <td class='$SeverityClass'>$($ErrorEntry.Severity)</td>
             <td><strong>$($ErrorEntry.ErrorName)</strong></td>
-            <td>$($ErrorEntry.Certificate)</td>
-            <td style='font-family: monospace; font-size: 0.85em;'>$($ErrorEntry.Thumbprint)</td>
+            <td>$CertDisplay</td>
+            <td style='font-family: monospace; font-size: 0.85em;'>$ThumbprintDisplay</td>
             <td>$($ErrorEntry.Description)<br><br><strong>Resolution:</strong> $($ErrorEntry.Resolution)</td>
             <td>$TrustHtml</td>
         </tr>
