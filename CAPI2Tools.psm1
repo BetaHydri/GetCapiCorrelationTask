@@ -777,7 +777,18 @@ function Find-CapiEventsByName {
           Number of hours to look back in the event log (default: 24)
           
       .PARAMETER IncludePattern
-          If specified, only returns events matching this pattern in the certificate details
+          If specified, only returns events matching this pattern in the certificate details.
+          For common scenarios, use -FilterType instead for autocomplete suggestions.
+          
+      .PARAMETER FilterType
+          Pre-defined filters for common troubleshooting scenarios:
+          - Revocation: Events related to revocation checking (OCSP, CRL)
+          - Expired: Certificate expiration issues
+          - Untrusted: Trust chain and root certificate issues
+          - ChainBuilding: Certificate chain construction events
+          - PolicyValidation: Certificate policy validation events
+          - SignatureValidation: Certificate signature verification
+          - ErrorsOnly: Events containing Result errors
           
       .EXAMPLE
           Find-CapiEventsByName -Name "bing.com"
@@ -788,8 +799,16 @@ function Find-CapiEventsByName {
           Finds all Microsoft-related certificate chains in the last 48 hours
           
       .EXAMPLE
-          Find-CapiEventsByName -Name "DigiCert" -IncludePattern "revocation"
-          Finds DigiCert certificates with revocation-related events
+          Find-CapiEventsByName -Name "DigiCert" -FilterType Revocation
+          Finds DigiCert certificates with revocation-related events (uses predefined filter)
+          
+      .EXAMPLE
+          Find-CapiEventsByName -Name "*.contoso.com" -FilterType Expired
+          Finds contoso.com certificates with expiration issues
+          
+      .EXAMPLE
+          Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
+          Finds site.com events containing "OCSP" (custom pattern)
           
       .EXAMPLE
           Find-CapiEventsByName -Name "chrome.exe"
@@ -821,12 +840,31 @@ function Find-CapiEventsByName {
         
         [Parameter(Mandatory = $false)]
         [string]
-        $IncludePattern
+        $IncludePattern,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Revocation', 'Expired', 'Untrusted', 'ChainBuilding', 'PolicyValidation', 'SignatureValidation', 'ErrorsOnly')]
+        [string]
+        $FilterType
     )
     
     begin {
         Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
         $StartTime = (Get-Date).AddHours(-$Hours)
+        
+        # Map FilterType to actual search patterns
+        if ($FilterType) {
+            $IncludePattern = switch ($FilterType) {
+                'Revocation'          { '*revocation*' }
+                'Expired'             { '*expired*' }
+                'Untrusted'           { '*untrusted*' }
+                'ChainBuilding'       { '*CertGetCertificateChain*' }
+                'PolicyValidation'    { '*CertVerifyCertificateChainPolicy*' }
+                'SignatureValidation' { '*signature*' }
+                'ErrorsOnly'          { '*<Result value=*' }
+            }
+            Write-Verbose "FilterType '$FilterType' mapped to pattern: $IncludePattern"
+        }
     }
     
     process {

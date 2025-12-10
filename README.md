@@ -53,6 +53,7 @@ The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing
 - 📚 **12 New Error Codes**: Expanded coverage with CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, and 9 more common errors
 - 🏢 **Enterprise Support**: Better diagnostics for Group Policy restrictions, TLS inspection, and mutual authentication
 - 🔐 **Certificate Thumbprints**: Error analysis now extracts and displays certificate thumbprints for easy identification
+- 🎯 **FilterType Parameter**: New `-FilterType` with tab completion for common scenarios (Revocation, Expired, Untrusted, etc.)
 
 ### What's New in v2.10
 
@@ -343,7 +344,24 @@ Find-CapiEventsByName -Name "google.com" -Hours 48
 
 # Search for certificate issuer
 Find-CapiEventsByName -Name "DigiCert"
+
+# ⭐ NEW: Use FilterType for common scenarios with autocomplete
+Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation
+Find-CapiEventsByName -Name "expired.badssl.com" -FilterType Expired
+Find-CapiEventsByName -Name "self-signed.badssl.com" -FilterType Untrusted
+
+# Custom pattern filtering (advanced)
+Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
 ```
+
+**Available FilterType options:**
+- `Revocation` - Events related to revocation checking (OCSP, CRL)
+- `Expired` - Certificate expiration issues
+- `Untrusted` - Trust chain and root certificate issues
+- `ChainBuilding` - Certificate chain construction events
+- `PolicyValidation` - Certificate policy validation events
+- `SignatureValidation` - Certificate signature verification
+- `ErrorsOnly` - Events containing Result errors
 
 ---
 
@@ -627,18 +645,27 @@ $After = Find-CapiEventsByName -Name "myapp.company.com"
 Compare-CapiEvents -ReferenceEvents $Before[0].Events -DifferenceEvents $After[0].Events
 ```
 
-### Example 5: Investigate Specific Error (Advanced)
+### Example 5: Investigate Specific Error Types
 
 ```powershell
-# Find events with revocation errors
-$Results = Find-CapiEventsByName -Name "*.microsoft.com" -IncludePattern "revocation"
+# ⭐ Use FilterType for common scenarios (with autocomplete)
+$Results = Find-CapiEventsByName -Name "*.microsoft.com" -FilterType Revocation
+
+# Find certificate expiration issues
+$ExpiredCerts = Find-CapiEventsByName -Name "*.contoso.com" -FilterType Expired
+
+# Find trust chain issues
+$TrustIssues = Find-CapiEventsByName -Name "internal-site.com" -FilterType Untrusted
 
 # Analyze first chain
 $Analysis = Get-CapiErrorAnalysis -Events $Results[0].Events
 
 # Filter for critical errors only
 $CriticalErrors = $Analysis | Where-Object { $_.Severity -eq "Critical" }
-$CriticalErrors | Format-Table ErrorName, Certificate, Resolution -Wrap
+$CriticalErrors | Format-Table ErrorName, Certificate, Thumbprint, Resolution -Wrap
+
+# Advanced: Custom pattern filtering
+$CustomResults = Find-CapiEventsByName -Name "site.com" -IncludePattern "OCSP"
 ```
 
 ### Example 6: Bulk Analysis and Reporting

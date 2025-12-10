@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extracted from `fileRef` attribute in CAPI2 events
   - Displayed in console output, HTML reports, and all export formats
   - Useful for tracking specific certificates and troubleshooting
+- **FilterType Parameter**: New `Find-CapiEventsByName -FilterType` with ValidateSet for common scenarios
+  - `Revocation` - Events related to revocation checking (OCSP, CRL)
+  - `Expired` - Certificate expiration issues
+  - `Untrusted` - Trust chain and root certificate issues
+  - `ChainBuilding` - Certificate chain construction events
+  - `PolicyValidation` - Certificate policy validation events
+  - `SignatureValidation` - Certificate signature verification
+  - `ErrorsOnly` - Events containing Result errors
+  - Enables tab completion and IntelliSense
+  - `-IncludePattern` still available for custom filtering
 
 ### Improved
 - **Correlation Chain Analysis**: Event ID 82 now included in TaskID-based correlation chains
@@ -30,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Resolution Guidance**: Enhanced CommonCause and Resolution descriptions for new error codes
 - **Enterprise Support**: Better coverage of Group Policy, TLS inspection, and mutual authentication scenarios
 - **Certificate Identification**: Thumbprint display enables quick certificate lookup in certificate stores
+- **User Experience**: FilterType provides intuitive, discoverable filtering without memorizing patterns
 
 ---
 
