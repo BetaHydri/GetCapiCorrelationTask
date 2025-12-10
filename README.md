@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.10-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.10.1-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -42,7 +42,16 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.10** introduces comprehensive TrustStatus parsing for detailed certificate chain validation analysis.
+**Version 2.10.1** adds support for Event ID 82 (catalog lookup failures) in error analysis.
+
+### What's New in v2.10.1
+
+- 📦 **Event ID 82 Support**: Catalog lookup failures now included in error analysis (CryptCATAdminEnumCatalogFromHash)
+- 🔍 **Error Code 490**: Added ERROR_NOT_FOUND (0x000001EA) for catalog security information not found
+- ℹ️ **Informational Severity**: Catalog lookups marked as Info (not critical errors) since many legitimate files aren't cataloged
+- 🔗 **Complete Correlation Chains**: Event ID 82 now visible in TaskID-based correlation analysis
+- 📚 **12 New Error Codes**: Expanded coverage with CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, and 9 more common errors
+- 🏢 **Enterprise Support**: Better diagnostics for Group Policy restrictions, TLS inspection, and mutual authentication
 
 ### What's New in v2.10
 
@@ -827,6 +836,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------||
+| 2.10.1 | December 2025 | Event ID 82 support (catalog lookup failures), 13 new error codes (ERROR_NOT_FOUND, CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, etc.), enhanced enterprise diagnostics, informational severity for catalog lookups |
 | 2.10 | December 2025 | TrustStatus parsing with 23 ErrorStatus and 13 InfoStatus flags, enhanced error analysis with detailed trust chain validation, improved HTML reports with trust details column, automatic severity tracking (Critical/Error/Warning), comprehensive certificate chain diagnostics |
 | 2.9 | December 2025 | Multi-file export (each chain to separate file), smart auto-generated filenames, directory-based ExportPath, Format parameter with ValidateSet, eliminated file overwrite issues |
 | 2.8 | December 2025 | Enhanced multi-field search (SubjectAltName, CN, ProcessName), process-based correlation, simplified usage with automatic field searching, priority-based matching |

@@ -8,7 +8,7 @@
     
 .NOTES
     Module Name:    CAPI2Tools
-    Version:        2.10.0
+    Version:        2.10.1
     Author:         Jan Tiedemann
     Copyright:      (c) 2022-2025 Jan Tiedemann. Licensed under GNU GPL v3.
     
@@ -91,6 +91,110 @@ $Script:CAPI2ErrorCodes = @{
         CommonCause = 'Certificate not found in store, missing certificate property'
         Resolution  = 'Verify certificate is installed, check certificate store'
         Severity    = 'Error'
+    }
+    '0x000001EA' = @{
+        Code        = '0x000001EA'
+        HexCode     = 'ERROR_NOT_FOUND'
+        Description = 'Catalog security information not found for this file hash.'
+        CommonCause = 'File not in Windows catalog database (normal for non-system files), catalog lookup failed'
+        Resolution  = 'Verify file signature directly if needed, check file source and integrity'
+        Severity    = 'Info'
+    }
+    '0x800B0110' = @{
+        Code        = '0x800B0110'
+        HexCode     = 'CERT_E_PURPOSE'
+        Description = 'The certificate is not valid for the requested purpose.'
+        CommonCause = 'Certificate used for incorrect purpose, Extended Key Usage mismatch'
+        Resolution  = 'Verify certificate Extended Key Usage (EKU) matches intended purpose'
+        Severity    = 'Error'
+    }
+    '0x800B0112' = @{
+        Code        = '0x800B0112'
+        HexCode     = 'CERT_E_PATHLENCONST'
+        Description = 'A path length constraint in the certificate chain has been violated.'
+        CommonCause = 'CA certificate used beyond allowed path depth, intermediate CA chain too long'
+        Resolution  = 'Review certificate chain path length constraints, obtain valid certificate chain'
+        Severity    = 'Error'
+    }
+    '0x800B0113' = @{
+        Code        = '0x800B0113'
+        HexCode     = 'CERT_E_CRITICAL'
+        Description = 'A certificate contains an unknown critical extension.'
+        CommonCause = 'Certificate has unsupported critical extension, incompatible extension version'
+        Resolution  = 'Obtain certificate without unsupported critical extensions, update certificate template'
+        Severity    = 'Error'
+    }
+    '0x800B0114' = @{
+        Code        = '0x800B0114'
+        HexCode     = 'CERT_E_VALIDITYPERIODNESTING'
+        Description = 'The validity periods of the certification chain do not nest correctly.'
+        CommonCause = 'Certificate issued before CA certificate validity period, time synchronization issue'
+        Resolution  = 'Verify certificate and CA validity periods, check system time, reissue certificate'
+        Severity    = 'Error'
+    }
+    '0x800B0115' = @{
+        Code        = '0x800B0115'
+        HexCode     = 'CERT_E_INVALID_POLICY'
+        Description = 'A required certificate policy is not present or does not meet constraints.'
+        CommonCause = 'Certificate policy OID mismatch, policy constraints not satisfied'
+        Resolution  = 'Obtain certificate with correct policy OID, review policy requirements'
+        Severity    = 'Error'
+    }
+    '0x80090308' = @{
+        Code        = '0x80090308'
+        HexCode     = 'SEC_E_INVALID_TOKEN'
+        Description = 'The security token provided is invalid or malformed.'
+        CommonCause = 'Corrupted authentication token, protocol mismatch, unsupported cipher suite'
+        Resolution  = 'Verify TLS/SSL configuration, check cipher suite compatibility, review security settings'
+        Severity    = 'Error'
+    }
+    '0x80090325' = @{
+        Code        = '0x80090325'
+        HexCode     = 'SEC_E_UNTRUSTED_ROOT'
+        Description = 'The certificate chain was issued by an authority that is not trusted.'
+        CommonCause = 'Root CA certificate not in Trusted Root store, self-signed certificate'
+        Resolution  = 'Install root CA certificate in Trusted Root Certification Authorities store'
+        Severity    = 'Critical'
+    }
+    '0x80090326' = @{
+        Code        = '0x80090326'
+        HexCode     = 'SEC_E_WRONG_PRINCIPAL'
+        Description = 'The target principal name is incorrect (certificate name mismatch).'
+        CommonCause = 'Certificate CN/SAN does not match hostname, wildcard certificate mismatch'
+        Resolution  = 'Obtain certificate with correct CN/SAN, verify hostname matches certificate'
+        Severity    = 'Critical'
+    }
+    '0x80090327' = @{
+        Code        = '0x80090327'
+        HexCode     = 'SEC_E_CERT_EXPIRED'
+        Description = 'The received certificate has expired or is not yet valid.'
+        CommonCause = 'Certificate expired, system time incorrect, certificate not yet valid'
+        Resolution  = 'Renew expired certificate, verify system time is correct'
+        Severity    = 'Critical'
+    }
+    '0x8009030C' = @{
+        Code        = '0x8009030C'
+        HexCode     = 'SEC_E_LOGON_DENIED'
+        Description = 'The logon attempt failed due to authentication failure.'
+        CommonCause = 'Client certificate authentication failed, mutual TLS error, invalid credentials'
+        Resolution  = 'Verify client certificate is valid and trusted, check certificate mapping'
+        Severity    = 'Error'
+    }
+    '0x80092026' = @{
+        Code        = '0x80092026'
+        HexCode     = 'CRYPT_E_SECURITY_SETTINGS'
+        Description = 'Security settings prevent certificate verification or usage.'
+        CommonCause = 'Group Policy restrictions, weak signature algorithm blocked, disabled cryptographic provider'
+        Resolution  = 'Review security policy settings, check signature algorithm requirements, verify cryptographic settings'
+        Severity    = 'Warning'
+    }
+    '0x80096010' = @{
+        Code        = '0x80096010'
+        HexCode     = 'TRUST_E_BAD_DIGEST'
+        Description = 'The digital signature of the object did not verify correctly.'
+        CommonCause = 'File modified after signing, corrupted signature, hash algorithm mismatch'
+        Resolution  = 'Re-download or obtain fresh copy of signed object, verify file integrity'
+        Severity    = 'Critical'
     }
     'FBF'        = @{
         Code        = 'FBF'
