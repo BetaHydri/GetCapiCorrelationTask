@@ -1259,6 +1259,121 @@ function Format-XML ([xml]$Xml, $Indent = 3) {
     Write-Output $StringWriter.ToString() 
 }
 
+function Get-X509CertificateInfo {
+    <#
+    .SYNOPSIS
+        Extracts certificate information from CAPI2 Event 90 (X509 Objects)
+        
+    .DESCRIPTION
+        Parses Event 90 to extract detailed certificate information including:
+        - Subject Common Name (CN)
+        - Subject Alternative Names (SANs) - DNS names, UPNs
+        - Organization
+        - Issuer
+        - Serial Number
+        - Validity dates
+        
+    .PARAMETER Events
+        Array of CAPI2 events to search for Event 90
+        
+    .OUTPUTS
+        PSCustomObject with certificate details or $null if no Event 90 found
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$Events
+    )
+    
+    # Find Event 90 (X509 Objects)
+    $Event90 = $Events | Where-Object { $_.ID -eq 90 } | Select-Object -First 1
+    
+    if (-not $Event90) {
+        return $null
+    }
+    
+    try {
+        [xml]$EventXml = $Event90.DetailedMessage
+        
+        # Get the first Certificate node (usually the end-entity/leaf certificate)
+        $CertNode = $EventXml.GetElementsByTagName("Certificate") | Select-Object -First 1
+        
+        if (-not $CertNode) {
+            return $null
+        }
+        
+        # Extract Subject CN
+        $SubjectCN = $CertNode.GetAttribute("subjectName")
+        
+        # Extract Subject details
+        $SubjectNode = $CertNode.SelectSingleNode("Subject")
+        $Organization = ""
+        $Country = ""
+        
+        if ($SubjectNode) {
+            $OrgNode = $SubjectNode.SelectSingleNode("O")
+            if ($OrgNode) { $Organization = $OrgNode.InnerText }
+            
+            $CountryNode = $SubjectNode.SelectSingleNode("C")
+            if ($CountryNode) { $Country = $CountryNode.InnerText }
+        }
+        
+        # Extract Issuer CN
+        $IssuerNode = $CertNode.SelectSingleNode("Issuer/CN")
+        $IssuerCN = if ($IssuerNode) { $IssuerNode.InnerText } else { "" }
+        
+        # Extract Subject Alternative Names (SANs)
+        $SANs = @()
+        $SANNode = $CertNode.SelectSingleNode("Extensions/SubjectAltName")
+        if ($SANNode) {
+            # DNS Names
+            $DNSNodes = $SANNode.SelectNodes("DNSName")
+            foreach ($DNS in $DNSNodes) {
+                $SANs += "DNS: $($DNS.InnerText)"
+            }
+            
+            # UPNs (User Principal Names)
+            $UPNNodes = $SANNode.SelectNodes("UPN")
+            foreach ($UPN in $UPNNodes) {
+                $SANs += "UPN: $($UPN.InnerText)"
+            }
+            
+            # Email addresses
+            $EmailNodes = $SANNode.SelectNodes("RFC822Name")
+            foreach ($Email in $EmailNodes) {
+                $SANs += "Email: $($Email.InnerText)"
+            }
+        }
+        
+        # Extract Serial Number
+        $SerialNode = $CertNode.SelectSingleNode("SerialNumber")
+        $SerialNumber = if ($SerialNode) { $SerialNode.InnerText } else { "" }
+        
+        # Extract Validity dates
+        $NotBeforeNode = $CertNode.SelectSingleNode("NotBefore")
+        $NotAfterNode = $CertNode.SelectSingleNode("NotAfter")
+        $NotBefore = if ($NotBeforeNode) { [DateTime]$NotBeforeNode.InnerText } else { $null }
+        $NotAfter = if ($NotAfterNode) { [DateTime]$NotAfterNode.InnerText } else { $null }
+        
+        # Build certificate info object
+        return [PSCustomObject]@{
+            SubjectCN      = $SubjectCN
+            Organization   = $Organization
+            Country        = $Country
+            IssuerCN       = $IssuerCN
+            SANs           = $SANs
+            SerialNumber   = $SerialNumber
+            NotBefore      = $NotBefore
+            NotAfter       = $NotAfter
+            HasSANs        = ($SANs.Count -gt 0)
+        }
+    }
+    catch {
+        Write-Verbose "Could not parse Event 90: $_"
+        return $null
+    }
+}
+
 function Get-EventChainSummary {
     <#
     .SYNOPSIS
@@ -1272,17 +1387,55 @@ function Get-EventChainSummary {
         [array]$Events
     )
     
-    # Mapping of Event IDs to Task Categories based on CAPI2 documentation
+    # Comprehensive mapping of Event IDs to Task Categories based on CAPI2 documentation
+    # Includes all possible CAPI2 Operational log events for complete chain visibility
     $TaskCategoryMap = @{
-        11 = "Build Chain"
+        # Chain Building
+        11  = "Build Chain"
+        100 = "Build Chain Context"
+        
+        # Chain Verification
         30 = "Verify Chain Policy"
+        31 = "Verify Chain Policy Result"
+        32 = "Chain Policy Context"
+        
+        # Revocation Checking
         70 = "Verify Revocation"
+        71 = "Revocation Status"
+        52 = "Retrieve CRL"
+        53 = "Retrieve OCSP"
+        
+        # Certificate Operations
         90 = "X509 Objects"
         10 = "Verify Trust"
         14 = "Certificate Details"
+        15 = "Certificate Path"
+        
+        # Cryptographic Operations
         40 = "Private Key"
+        41 = "Sign Hash"
+        42 = "Verify Signature"
+        
+        # CRL/CTL Operations
         50 = "CRL Retrieval"
+        51 = "CRL Verification"
         80 = "CTL Operations"
+        81 = "CTL Retrieval"
+        
+        # Chain Context
+        1  = "Retrieve Object from Cache"
+        2  = "Add Object to Cache"
+        3  = "Remove Object from Cache"
+        4  = "Cache Flush"
+        
+        # Network Retrieval
+        20 = "Begin Network Retrieval"
+        21 = "End Network Retrieval"
+        22 = "Network Retrieval Timeout"
+        
+        # Errors and Warnings
+        101 = "Chain Error"
+        102 = "Chain Warning"
     }
     
     # Level mapping
@@ -1498,6 +1651,60 @@ function Get-CapiErrorAnalysis {
     }
     
     end {
+        # Extract X509 certificate information from Event 90 and display at top
+        $CertInfo = Get-X509CertificateInfo -Events $Events
+        
+        if ($CertInfo) {
+            Write-Host "`n╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+            Write-Host "║           Certificate Information (Event 90)                  ║" -ForegroundColor Cyan
+            Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+            Write-Host "  Subject CN:      " -NoNewline -ForegroundColor Gray
+            Write-Host "$($CertInfo.SubjectCN)" -ForegroundColor White
+            
+            if ($CertInfo.Organization) {
+                Write-Host "  Organization:    " -NoNewline -ForegroundColor Gray
+                Write-Host "$($CertInfo.Organization)" -ForegroundColor White
+            }
+            
+            if ($CertInfo.Country) {
+                Write-Host "  Country:         " -NoNewline -ForegroundColor Gray
+                Write-Host "$($CertInfo.Country)" -ForegroundColor White
+            }
+            
+            if ($CertInfo.IssuerCN) {
+                Write-Host "  Issued By:       " -NoNewline -ForegroundColor Gray
+                Write-Host "$($CertInfo.IssuerCN)" -ForegroundColor White
+            }
+            
+            if ($CertInfo.HasSANs) {
+                Write-Host "  SANs:            " -NoNewline -ForegroundColor Gray
+                $FirstSAN = $true
+                foreach ($SAN in $CertInfo.SANs) {
+                    if ($FirstSAN) {
+                        Write-Host "$SAN" -ForegroundColor Cyan
+                        $FirstSAN = $false
+                    } else {
+                        Write-Host "                   $SAN" -ForegroundColor Cyan
+                    }
+                }
+            }
+            
+            if ($CertInfo.SerialNumber) {
+                Write-Host "  Serial:          " -NoNewline -ForegroundColor Gray
+                Write-Host "$($CertInfo.SerialNumber)" -ForegroundColor DarkGray
+            }
+            
+            if ($CertInfo.NotBefore -and $CertInfo.NotAfter) {
+                Write-Host "  Valid:           " -NoNewline -ForegroundColor Gray
+                $Now = Get-Date
+                $ValidityColor = if ($Now -lt $CertInfo.NotBefore) { "Yellow" } 
+                                elseif ($Now -gt $CertInfo.NotAfter) { "Red" }
+                                else { "Green" }
+                Write-Host "$($CertInfo.NotBefore.ToString('yyyy-MM-dd')) to $($CertInfo.NotAfter.ToString('yyyy-MM-dd'))" -ForegroundColor $ValidityColor
+            }
+            Write-Host ""
+        }
+        
         # Display event chain if requested
         if ($ShowEventChain -and $Events.Count -gt 0) {
             Write-Host "`n=== CAPI2 Correlation Chain Events ===" -ForegroundColor Cyan
@@ -1764,13 +1971,32 @@ function Export-CapiEvents {
                     $XmlData | Export-Clixml -Path $Path
                 }
                 'HTML' {
-                    # Extract certificate name from events for header display
-                    $CertificateName = ""
-                    foreach ($evt in $ExportData) {
-                        if ($evt.Certificate) {
-                            $CertificateName = $evt.Certificate
-                            break
-                        }
+                    # Extract X509 certificate information from Event 90
+                    $CertInfo = Get-X509CertificateInfo -Events $Events
+                    
+                    # Build certificate info HTML section
+                    $CertInfoHtml = ""
+                    if ($CertInfo) {
+                        $CertInfoHtml = @"
+    <div class="info" style="background: #f0f9ff; border-left: 4px solid #0078d4;">
+        <h3 style="margin-top: 0; color: #0078d4;">📜 Certificate Details (Event 90 - X509 Objects)</h3>
+        <table style="box-shadow: none; margin-top: 10px;">
+            <tr><td style="font-weight: bold; width: 150px;">Subject CN:</td><td>$($CertInfo.SubjectCN)</td></tr>
+$(if ($CertInfo.Organization) { "            <tr><td style='font-weight: bold;'>Organization:</td><td>$($CertInfo.Organization)</td></tr>`n" })$(if ($CertInfo.Country) { "            <tr><td style='font-weight: bold;'>Country:</td><td>$($CertInfo.Country)</td></tr>`n" })$(if ($CertInfo.IssuerCN) { "            <tr><td style='font-weight: bold;'>Issued By:</td><td>$($CertInfo.IssuerCN)</td></tr>`n" })$(if ($CertInfo.HasSANs) {
+    $SANsHtml = ($CertInfo.SANs | ForEach-Object { "<li>$_</li>" }) -join ""
+    "            <tr><td style='font-weight: bold;'>SANs:</td><td><ul style='margin: 5px 0; padding-left: 20px;'>$SANsHtml</ul></td></tr>`n"
+})$(if ($CertInfo.SerialNumber) { "            <tr><td style='font-weight: bold;'>Serial Number:</td><td style='font-family: monospace; font-size: 0.9em;'>$($CertInfo.SerialNumber)</td></tr>`n" })$(if ($CertInfo.NotBefore -and $CertInfo.NotAfter) {
+    $Now = Get-Date
+    $ValidityStatus = if ($Now -lt $CertInfo.NotBefore) { "⚠️ Not yet valid" } 
+                     elseif ($Now -gt $CertInfo.NotAfter) { "❌ Expired" }
+                     else { "✅ Valid" }
+    $ValidityColor = if ($Now -lt $CertInfo.NotBefore) { "color: #ff8c00;" } 
+                    elseif ($Now -gt $CertInfo.NotAfter) { "color: #d13438;" }
+                    else { "color: #107c10;" }
+    "            <tr><td style='font-weight: bold;'>Validity Period:</td><td><span style='$ValidityColor'>$ValidityStatus</span> ($($CertInfo.NotBefore.ToString('yyyy-MM-dd')) to $($CertInfo.NotAfter.ToString('yyyy-MM-dd')))</td></tr>`n"
+})        </table>
+    </div>
+"@
                     }
                     
                     $HtmlReport = @"
@@ -1782,6 +2008,7 @@ function Export-CapiEvents {
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f5f5f5; }
         h1 { color: #0078d4; border-bottom: 3px solid #0078d4; padding-bottom: 10px; }
         h2 { color: #106ebe; margin-top: 30px; }
+        h3 { color: #0078d4; margin-bottom: 10px; }
         .info { background: #e7f3ff; padding: 15px; border-left: 4px solid #0078d4; margin: 20px 0; }
         .cert-name { font-size: 1.2em; color: #0078d4; font-weight: bold; margin-bottom: 10px; }
         table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -1798,10 +2025,11 @@ function Export-CapiEvents {
 <body>
     <h1>🔐 CAPI2 Certificate Validation Report</h1>
     <div class="info">
-$(if ($CertificateName) { "        <div class='cert-name'>Certificate: $CertificateName</div>`n" })        <strong>Generated:</strong> $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")<br>
+        <strong>Generated:</strong> $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")<br>
         <strong>TaskID:</strong> $TaskID<br>
         <strong>Event Count:</strong> $($Events.Count)
     </div>
+$CertInfoHtml
 "@
                     
                     if ($IncludeErrorAnalysis) {
