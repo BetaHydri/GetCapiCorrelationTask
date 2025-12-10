@@ -415,19 +415,45 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
         
         It "Should not throw when no events are found" {
             # This simulates the scenario where certificate name doesn't exist in logs
-            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" } | Should Not Throw
+            { Get-CapiCertificateReport -Name "nonexistent-test-certificate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ErrorAction SilentlyContinue } | Should Not Throw
         }
         
-        It "Should accept ExportPath as directory with Format parameter (v2.9)" {
-            $TempDir = Join-Path $env:TEMP "cert_reports_$(Get-Date -Format 'yyyyMMddHHmmss')"
+        It "Should create export directory if it doesn't exist (v2.9 feature)" {
+            $TempDir = Join-Path $env:TEMP "cert_autocreate_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
-            # This will search but likely find nothing - we're testing the parameter handling
-            { Get-CapiCertificateReport -Name "test-dir-export.com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue } | Should Not Throw
-            
-            # Clean up if directory was created
+            # Ensure directory doesn't exist
             if (Test-Path $TempDir) {
-                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item $TempDir -Recurse -Force
             }
+            
+            # Directory should not exist before call
+            Test-Path $TempDir | Should Be $false
+            
+            # Call with ExportPath - should create directory even if no events found
+            Get-CapiCertificateReport -Name "test-autocreate-$(Get-Date -Format 'yyyyMMddHHmmss').com" -ExportPath $TempDir -Format HTML -ErrorAction SilentlyContinue
+            
+            # Directory should now exist (created by the function)
+            Test-Path $TempDir | Should Be $true
+            Test-Path $TempDir -PathType Container | Should Be $true
+            
+            # Clean up
+            Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        It "Should throw error if ExportPath is a file, not a directory" {
+            $TempFile = Join-Path $env:TEMP "cert_file_$(Get-Date -Format 'yyyyMMddHHmmss').txt"
+            
+            # Create a file
+            "test" | Out-File -FilePath $TempFile -Force
+            
+            # Verify it's a file
+            Test-Path $TempFile -PathType Leaf | Should Be $true
+            
+            # Should throw error when ExportPath is a file
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempFile -Format HTML -ErrorAction Stop } | Should Throw
+            
+            # Clean up
+            Remove-Item $TempFile -Force -ErrorAction SilentlyContinue
         }
         
         It "Should accept Format parameter with HTML value" {
@@ -464,6 +490,17 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
             $TempDir = Join-Path $env:TEMP "cert_xml_$(Get-Date -Format 'yyyyMMddHHmmss')"
             
             { Get-CapiCertificateReport -Name "test-xml.com" -ExportPath $TempDir -Format XML -ErrorAction SilentlyContinue } | Should Not Throw
+            
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+        It "Format parameter should reject invalid values" {
+            $TempDir = Join-Path $env:TEMP "cert_invalid_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            # Should throw because 'TXT' is not in ValidateSet
+            { Get-CapiCertificateReport -Name "test.com" -ExportPath $TempDir -Format "TXT" -ErrorAction Stop } | Should Throw
             
             if (Test-Path $TempDir) {
                 Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
