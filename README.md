@@ -158,7 +158,7 @@ Convenient shortcuts for commonly used commands:
 
 ```powershell
 # ⭐ SIMPLEST: One command to do everything
-Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "report.html"
+Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "C:\Reports"
 
 # Search for events (function or alias)
 Find-CapiEventsByName -Name "microsoft.com"
@@ -248,11 +248,11 @@ The **easiest way** to diagnose certificate issues - one command does it all:
 # Just search and view results
 Get-CapiCertificateReport -Name "problematic-site.com"
 
-# Search and export to HTML in one command
-Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "report.html"
+# Search and export to HTML in one command (auto-generates filename)
+Get-CapiCertificateReport -Name "problematic-site.com" -ExportPath "C:\Reports"
 
 # Search, export, and open report automatically
-Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "report.html" -OpenReport
+Get-CapiCertificateReport -Name "*.contoso.com" -ExportPath "C:\Reports" -OpenReport
 ```
 
 **That's it!** This single command:
@@ -589,13 +589,13 @@ Internal helper that translates error codes to human-readable descriptions.
 
 ```powershell
 # ⭐ The easiest way - one command does everything!
-Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "report.html"
+Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "C:\Reports"
 
 # With automatic browser opening
-Get-CapiCertificateReport -Name "self-signed.badssl.com" -ExportPath "report.html" -OpenReport
+Get-CapiCertificateReport -Name "self-signed.badssl.com" -ExportPath "C:\Reports" -OpenReport
 
 # Export to JSON for automation
-Get-CapiCertificateReport -Name "wrong.host.badssl.com" -ExportPath "errors.json"
+Get-CapiCertificateReport -Name "wrong.host.badssl.com" -ExportPath "C:\Reports"
 
 # Search last 2 hours with detailed output
 Get-CapiCertificateReport -Name "problematic-site.com" -Hours 2 -ShowDetails
@@ -610,7 +610,7 @@ Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -In
 
 **Now just one line:**
 ```powershell
-Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "report.html"
+Get-CapiCertificateReport -Name "expired.badssl.com" -ExportPath "C:\Reports"
 ```
 
 ### Example 2: Traditional Complete Troubleshooting Session (Advanced)
