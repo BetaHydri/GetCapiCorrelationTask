@@ -1175,10 +1175,13 @@ function Convert-EventLogRecord {
             [xml]$r = $record.ToXml()
   
             $h = [ordered]@{
-                LogName     = $record.LogName
-                RecordType  = $record.LevelDisplayName
-                TimeCreated = $record.TimeCreated
-                ID          = $record.Id
+                LogName          = $record.LogName
+                RecordType       = $record.LevelDisplayName
+                Level            = $record.Level
+                LevelDisplayName = $record.LevelDisplayName
+                TimeCreated      = $record.TimeCreated
+                ID               = $record.Id
+                Id               = $record.Id  # Alias for compatibility
             }
   
             if ($r.Event.UserData.HasChildNodes) {
@@ -1538,18 +1541,21 @@ function Get-EventChainSummary {
         $TaskDisplay = if ($Event.TaskDisplayName) {
             $Event.TaskDisplayName
         }
-        elseif ($TaskCategoryMap.ContainsKey($Event.Id)) {
+        elseif ($null -ne $Event.Id -and $TaskCategoryMap.ContainsKey($Event.Id)) {
             $TaskCategoryMap[$Event.Id]
         }
-        else {
+        elseif ($null -ne $Event.Id) {
             "Event $($Event.Id)"
+        }
+        else {
+            "Unknown"
         }
         
         $ChainSummary += [PSCustomObject]@{
             Sequence     = $SequenceNum
             TimeCreated  = $Event.TimeCreated
             Level        = $LevelDisplay
-            EventID      = $Event.Id
+            EventID      = if ($null -ne $Event.Id) { $Event.Id } else { "N/A" }
             TaskCategory = $TaskDisplay
         }
     }
