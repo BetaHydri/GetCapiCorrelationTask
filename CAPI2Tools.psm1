@@ -1473,17 +1473,25 @@ function Get-X509CertificateInfo {
         $NotBefore = if ($NotBeforeNode) { [DateTime]$NotBeforeNode.InnerText } else { $null }
         $NotAfter = if ($NotAfterNode) { [DateTime]$NotAfterNode.InnerText } else { $null }
         
+        # Extract sequence number from CorrelationAuxInfo
+        $SequenceNumber = $null
+        $AuxInfoNode = $EventXml.GetElementsByTagName("CorrelationAuxInfo") | Select-Object -First 1
+        if ($AuxInfoNode -and $AuxInfoNode.SeqNumber) {
+            $SequenceNumber = [int]$AuxInfoNode.SeqNumber
+        }
+        
         # Build certificate info object
         return [PSCustomObject]@{
-            SubjectCN    = $SubjectCN
-            Organization = $Organization
-            Country      = $Country
-            IssuerCN     = $IssuerCN
-            SANs         = $SANs
-            SerialNumber = $SerialNumber
-            NotBefore    = $NotBefore
-            NotAfter     = $NotAfter
-            HasSANs      = ($SANs.Count -gt 0)
+            SubjectCN       = $SubjectCN
+            Organization    = $Organization
+            Country         = $Country
+            IssuerCN        = $IssuerCN
+            SANs            = $SANs
+            SerialNumber    = $SerialNumber
+            NotBefore       = $NotBefore
+            NotAfter        = $NotAfter
+            HasSANs         = ($SANs.Count -gt 0)
+            SequenceNumber  = $SequenceNumber
         }
     }
     catch {
@@ -1827,8 +1835,19 @@ function Get-CapiErrorAnalysis {
             $BoxTop = "$BoxTopLeft" + ($BoxHoriz * 63) + "$BoxTopRight"
             $BoxBottom = "$BoxBottomLeft" + ($BoxHoriz * 63) + "$BoxBottomRight"
             
+            # Build title with sequence number if available
+            $TitleText = if ($CertInfo.SequenceNumber) {
+                "Certificate Information (Event 90, Sequence $($CertInfo.SequenceNumber))"
+            } else {
+                "Certificate Information (Event 90)"
+            }
+            $PaddingNeeded = 63 - $TitleText.Length
+            $LeftPad = [math]::Floor($PaddingNeeded / 2)
+            $RightPad = $PaddingNeeded - $LeftPad
+            $CenteredTitle = "" * $LeftPad + $TitleText + "" * $RightPad
+            
             Write-Host "`n$BoxTop" -ForegroundColor Cyan
-            Write-Host "$BoxVert           Certificate Information (Event 90)                  $BoxVert" -ForegroundColor Cyan
+            Write-Host "$BoxVert$CenteredTitle$BoxVert" -ForegroundColor Cyan
             Write-Host "$BoxBottom" -ForegroundColor Cyan
             Write-Host "  Subject CN:      " -NoNewline -ForegroundColor Gray
             Write-Host "$($CertInfo.SubjectCN)" -ForegroundColor White
