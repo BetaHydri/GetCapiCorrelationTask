@@ -1121,13 +1121,13 @@ function Get-CapiTaskIDEvents {
                 $AllEvents = Get-WinEvent -FilterXPath $QueryTaskId -LogName Microsoft-Windows-CAPI2/Operational -ErrorAction SilentlyContinue
                 
                 if ($AllEvents) {
-                    $Events = $AllEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+                    $Events = $AllEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, Level, LevelDisplayName, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
                     return $Events
                 }
             }
             
             # Fallback: return just the chainRef events if we couldn't find CorrelationAuxInfo
-            $Events = $ChainRefEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+            $Events = $ChainRefEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, Level, LevelDisplayName, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
             return $Events
         }
         
@@ -1137,7 +1137,7 @@ function Get-CapiTaskIDEvents {
         
         if ($RawEvents) {
             Write-Verbose "Found $($RawEvents.Count) raw events, converting..."
-            $Events = $RawEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+            $Events = $RawEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, Level, LevelDisplayName, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
             
             if ($Events -and $Events.Count -gt 0) {
                 Write-Verbose "Returning $($Events.Count) converted events"
@@ -1180,8 +1180,7 @@ function Convert-EventLogRecord {
                 Level            = $record.Level
                 LevelDisplayName = $record.LevelDisplayName
                 TimeCreated      = $record.TimeCreated
-                ID               = $record.Id
-                Id               = $record.Id  # Alias for compatibility
+                Id               = $record.Id
             }
   
             if ($r.Event.UserData.HasChildNodes) {
@@ -1615,10 +1614,25 @@ function Get-CapiErrorAnalysis {
     begin {
         $ErrorTable = @()
         $ErrorSummary = @{}
+        $AllEventsAccumulator = @()
     }
     
     process {
-        foreach ($CurrentEvent in $Events) {
+        # Handle pipeline input from Find-CapiEventsByName which has .Events property
+        $EventsToProcess = if ($Events[0].PSObject.Properties.Name -contains 'Events') {
+            # Piped from Find-CapiEventsByName - extract actual events
+            $Events | ForEach-Object { $_.Events }
+        } else {
+            # Direct array of events
+            $Events
+        }
+        
+        # Accumulate individual events for use in end block
+        foreach ($Event in $EventsToProcess) {
+            $AllEventsAccumulator += $Event
+        }
+        
+        foreach ($CurrentEvent in $EventsToProcess) {
             # Parse XML to find error codes
             try {
                 [xml]$EventXml = $CurrentEvent.DetailedMessage
@@ -1708,7 +1722,7 @@ function Get-CapiErrorAnalysis {
     
     end {
         # Extract X509 certificate information from Event 90 and display at top
-        $CertInfo = Get-X509CertificateInfo -Events $Events
+        $CertInfo = Get-X509CertificateInfo -Events $AllEventsAccumulator
         
         if ($CertInfo) {
             Write-Host "`n╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -1763,12 +1777,12 @@ function Get-CapiErrorAnalysis {
         }
         
         # Display event chain if requested
-        if ($ShowEventChain -and $Events.Count -gt 0) {
+        if ($ShowEventChain -and $AllEventsAccumulator.Count -gt 0) {
             Write-Host "`n=== CAPI2 Correlation Chain Events ===" -ForegroundColor Cyan
-            Write-Host "Total events in chain: $($Events.Count)" -ForegroundColor Gray
+            Write-Host "Total events in chain: $($AllEventsAccumulator.Count)" -ForegroundColor Gray
             Write-Host "Events are sorted by AuxInfo sequence number`n" -ForegroundColor Gray
             
-            $ChainSummary = Get-EventChainSummary -Events $Events
+            $ChainSummary = Get-EventChainSummary -Events $AllEventsAccumulator
             $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory -AutoSize
         }
         
