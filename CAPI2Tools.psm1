@@ -1482,16 +1482,16 @@ function Get-X509CertificateInfo {
         
         # Build certificate info object
         return [PSCustomObject]@{
-            SubjectCN       = $SubjectCN
-            Organization    = $Organization
-            Country         = $Country
-            IssuerCN        = $IssuerCN
-            SANs            = $SANs
-            SerialNumber    = $SerialNumber
-            NotBefore       = $NotBefore
-            NotAfter        = $NotAfter
-            HasSANs         = ($SANs.Count -gt 0)
-            SequenceNumber  = $SequenceNumber
+            SubjectCN      = $SubjectCN
+            Organization   = $Organization
+            Country        = $Country
+            IssuerCN       = $IssuerCN
+            SANs           = $SANs
+            SerialNumber   = $SerialNumber
+            NotBefore      = $NotBefore
+            NotAfter       = $NotAfter
+            HasSANs        = ($SANs.Count -gt 0)
+            SequenceNumber = $SequenceNumber
         }
     }
     catch {
@@ -1838,7 +1838,8 @@ function Get-CapiErrorAnalysis {
             # Build title with sequence number if available
             $TitleText = if ($CertInfo.SequenceNumber) {
                 "Certificate Information (Event 90, Sequence $($CertInfo.SequenceNumber))"
-            } else {
+            }
+            else {
                 "Certificate Information (Event 90)"
             }
             $PaddingNeeded = 63 - $TitleText.Length
