@@ -1622,7 +1622,8 @@ function Get-CapiErrorAnalysis {
         $EventsToProcess = if ($Events[0].PSObject.Properties.Name -contains 'Events') {
             # Piped from Find-CapiEventsByName - extract actual events
             $Events | ForEach-Object { $_.Events }
-        } else {
+        }
+        else {
             # Direct array of events
             $Events
         }
