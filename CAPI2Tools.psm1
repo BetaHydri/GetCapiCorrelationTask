@@ -1046,13 +1046,19 @@ function Get-CapiTaskIDEvents {
       .DESCRIPTION
           In the CAPI2 log, events belonging to the same certificate validation chain share a TaskID. 
           This function retrieves all events in the sequence based on the provided TaskID.
+          Supports both full GUID format and partial GUID (first 8 characters) for convenience.
             
       .PARAMETER TaskID
           The correlation TaskID (GUID) that identifies a specific certificate validation sequence.
           Can be obtained from a single event or using Find-CapiEventsByName.
+          Accepts full GUID format: "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F"
+          Or shortened format (first 8 chars): "7E11B6A3"
        
       .EXAMPLE
           Get-CapiTaskIDEvents -TaskID "7E11B6A3-50EA-47ED-928D-BBE4784EFA3F" | Format-List
+          
+      .EXAMPLE
+          Get-CapiTaskIDEvents -TaskID "7E11B6A3" | Format-List
           
       .EXAMPLE
           $Results = Find-CapiEventsByName -Name "microsoft.com"
@@ -1091,6 +1097,66 @@ function Get-CapiTaskIDEvents {
         # Normalize TaskID format - remove braces if present, we'll add them in queries
         $TaskID = $TaskID.Trim('{}')
         
+        # Check if this is a partial GUID (8 characters or less)
+        $IsPartialGuid = $TaskID.Length -le 8
+        
+        if ($IsPartialGuid) {
+            Write-Verbose "Searching for TaskID starting with: $TaskID"
+            
+            # For partial GUID, we need to search all recent events and filter
+            $MaxEvents = 2000
+            $AllEvents = Get-WinEvent -LogName Microsoft-Windows-CAPI2/Operational -MaxEvents $MaxEvents -ErrorAction SilentlyContinue
+            
+            # Filter manually to avoid scoping issues with Where-Object
+            $MatchingEvents = @()
+            foreach ($evt in $AllEvents) {
+                try {
+                    [xml]$EventXml = $evt.ToXml()
+                    
+                    # Try CorrelationAuxInfo TaskId
+                    $TaskIdNodes = $EventXml.GetElementsByTagName("CorrelationAuxInfo")
+                    foreach ($Node in $TaskIdNodes) {
+                        if ($Node.TaskId) {
+                            $FullTaskId = ($Node.TaskId -replace '[{}]', '').Trim()
+                            if ($FullTaskId.StartsWith($TaskID, [StringComparison]::OrdinalIgnoreCase)) {
+                                Write-Verbose "  Matched TaskId: $FullTaskId"
+                                $MatchingEvents += $evt
+                                break
+                            }
+                        }
+                    }
+                    
+                    # If not found in TaskId, try chainRef
+                    if ($MatchingEvents -notcontains $evt) {
+                        $ChainNodes = $EventXml.GetElementsByTagName("CertificateChain")
+                        foreach ($Node in $ChainNodes) {
+                            if ($Node.chainRef) {
+                                $ChainRef = $Node.chainRef -replace '[{}]', ''
+                                if ($ChainRef.StartsWith($TaskID, [StringComparison]::OrdinalIgnoreCase)) {
+                                    Write-Verbose "  Matched chainRef: $ChainRef"
+                                    $MatchingEvents += $evt
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+            
+            if ($MatchingEvents) {
+                Write-Verbose "Found $($MatchingEvents.Count) matching events for partial GUID: $TaskID"
+                $Events = $MatchingEvents | Convert-EventLogRecord | Select-Object -Property TimeCreated, Id, Level, LevelDisplayName, RecordType, @{N = 'DetailedMessage'; E = { (Format-XML $_.UserData) } } | Sort-Object -Property TimeCreated
+                return $Events
+            }
+            else {
+                Write-Host "No CAPI2 events found matching partial TaskID: $TaskID" -ForegroundColor Yellow
+                Write-Host "Searched the last $MaxEvents events. Try using the full GUID for older events." -ForegroundColor Gray
+                return $null
+            }
+        }
+        
+        # Full GUID search (original logic)
         # First, try to find events by chainRef (most common scenario)
         $QueryChainRef = "*[UserData/CertVerifyCertificateChainPolicy/CertificateChain[@chainRef='{$TaskID}']] or 
         *[UserData/CertGetCertificateChain/CertificateChain[@chainRef='{$TaskID}']] or
@@ -1503,15 +1569,27 @@ function Get-EventChainSummary {
     $ChainSummary = @()
     
     foreach ($Event in $Events) {
-        # Extract sequence number from CorrelationAuxInfo
+        # Extract sequence number, TaskID, and chainRef from CorrelationAuxInfo
         $SequenceNum = $null
+        $TaskIDValue = $null
+        $ChainRefValue = $null
         try {
             [xml]$EventXml = $Event.DetailedMessage
             
-            # Try CorrelationAuxInfo/@SeqNumber (most common, namespace-aware)
+            # Try CorrelationAuxInfo/@SeqNumber, @TaskId, and @chainRef (most common, namespace-aware)
             $AuxInfoNode = $EventXml.GetElementsByTagName("CorrelationAuxInfo") | Select-Object -First 1
-            if ($AuxInfoNode -and $AuxInfoNode.SeqNumber) {
-                $SequenceNum = [int]$AuxInfoNode.SeqNumber
+            if ($AuxInfoNode) {
+                if ($AuxInfoNode.SeqNumber) {
+                    $SequenceNum = [int]$AuxInfoNode.SeqNumber
+                }
+                # TaskId can be in format {GUID} or GUID
+                if ($AuxInfoNode.TaskId) {
+                    $TaskIDValue = $AuxInfoNode.TaskId -replace '[{}]', ''
+                }
+                # chainRef as fallback if no TaskId
+                if ($AuxInfoNode.chainRef) {
+                    $ChainRefValue = $AuxInfoNode.chainRef -replace '[{}]', ''
+                }
             }
             else {
                 # Fallback to EventAuxInfo/@SequenceNumber
@@ -1550,12 +1628,25 @@ function Get-EventChainSummary {
             "Unknown"
         }
         
+        # Use TaskID if available, otherwise use chainRef (shortened to first 8 chars)
+        # TaskID is preferred as it's unique per validation operation
+        $CorrelationID = if ($TaskIDValue) { 
+            $TaskIDValue.Substring(0, 8)
+        } 
+        elseif ($ChainRefValue) { 
+            $ChainRefValue.Substring(0, 8)
+        } 
+        else { 
+            "" 
+        }
+        
         $ChainSummary += [PSCustomObject]@{
             Sequence     = $SequenceNum
             TimeCreated  = $Event.TimeCreated
             Level        = $LevelDisplay
             EventID      = if ($null -ne $Event.Id) { $Event.Id } else { "N/A" }
             TaskCategory = $TaskDisplay
+            TaskID       = $CorrelationID
         }
     }
     
@@ -1726,9 +1817,19 @@ function Get-CapiErrorAnalysis {
         $CertInfo = Get-X509CertificateInfo -Events $AllEventsAccumulator
         
         if ($CertInfo) {
-            Write-Host "`n╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-            Write-Host "║           Certificate Information (Event 90)                  ║" -ForegroundColor Cyan
-            Write-Host "╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+            $BoxTopLeft = [char]0x2554      # ╔
+            $BoxTopRight = [char]0x2557     # ╗
+            $BoxBottomLeft = [char]0x255A   # ╚
+            $BoxBottomRight = [char]0x255D  # ╝
+            $BoxVert = [char]0x2551         # ║
+            $BoxHoriz = [char]0x2550        # ═
+            
+            $BoxTop = "$BoxTopLeft" + ($BoxHoriz * 63) + "$BoxTopRight"
+            $BoxBottom = "$BoxBottomLeft" + ($BoxHoriz * 63) + "$BoxBottomRight"
+            
+            Write-Host "`n$BoxTop" -ForegroundColor Cyan
+            Write-Host "$BoxVert           Certificate Information (Event 90)                  $BoxVert" -ForegroundColor Cyan
+            Write-Host "$BoxBottom" -ForegroundColor Cyan
             Write-Host "  Subject CN:      " -NoNewline -ForegroundColor Gray
             Write-Host "$($CertInfo.SubjectCN)" -ForegroundColor White
             
@@ -1784,7 +1885,29 @@ function Get-CapiErrorAnalysis {
             Write-Host "Events are sorted by AuxInfo sequence number`n" -ForegroundColor Gray
             
             $ChainSummary = Get-EventChainSummary -Events $AllEventsAccumulator
-            $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory -AutoSize
+            
+            # Check for duplicate sequence numbers (indicates mixed TaskIds)
+            $SequenceGroups = $ChainSummary | Where-Object { $_.Sequence -ne $null -and $_.Sequence -ne "" } | Group-Object -Property Sequence
+            $DuplicateSequences = $SequenceGroups | Where-Object { $_.Count -gt 1 }
+            
+            if ($DuplicateSequences) {
+                $WarnSymbol = [char]0x26A0  # ⚠
+                $BulbSymbol = [char]0x2600  # ☀ (sun/bright idea)
+                $Bullet = '*'
+                Write-Host "$WarnSymbol  WARNING: Duplicate sequence numbers detected!" -ForegroundColor Yellow
+                Write-Host "   This indicates events from multiple validation attempts are mixed together." -ForegroundColor Yellow
+                Write-Host "`n   What's happening:" -ForegroundColor Cyan
+                Write-Host "   $Bullet Same certificate was validated multiple times" -ForegroundColor Gray
+                Write-Host "   $Bullet Each validation got a different TaskId with its own sequence (1, 2, 3...)" -ForegroundColor Gray
+                Write-Host "   $Bullet Events retrieved by chainRef mixed different validation attempts" -ForegroundColor Gray
+                Write-Host "   $Bullet Result: Events from 2+ operations share sequence numbers" -ForegroundColor Gray
+                Write-Host "`n   $BulbSymbol Recommendation:" -ForegroundColor Cyan
+                Write-Host "   $Bullet Use Get-CapiTaskIDEvents with a specific TaskID for clean sequences" -ForegroundColor Gray
+                Write-Host "   $Bullet Use a narrower time window to isolate single validation attempts" -ForegroundColor Gray
+                Write-Host "   $Bullet See README 'Understanding CAPI2 Event Correlation' section`n" -ForegroundColor Gray
+            }
+            
+            $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory, TaskID -AutoSize
         }
         
         if ($ErrorTable.Count -eq 0) {
