@@ -1656,22 +1656,37 @@ function Get-CapiErrorAnalysis {
         $ErrorTable = @()
         $ErrorSummary = @{}
         $AllEventsAccumulator = @()
+        $ChainCollection = @()
+        $PipelineChainCount = 0
     }
     
     process {
         # Handle pipeline input from Find-CapiEventsByName which has .Events property
-        $EventsToProcess = if ($Events[0].PSObject.Properties.Name -contains 'Events') {
-            # Piped from Find-CapiEventsByName - extract actual events
-            $Events | ForEach-Object { $_.Events }
+        $IsChainObject = $Events[0].PSObject.Properties.Name -contains 'Events'
+        
+        if ($IsChainObject) {
+            # Piped from Find-CapiEventsByName - track each chain separately
+            foreach ($ChainObj in $Events) {
+                $PipelineChainCount++
+                $ChainCollection += [PSCustomObject]@{
+                    ChainNumber = $PipelineChainCount
+                    TaskID = if ($ChainObj.TaskID) { $ChainObj.TaskID } else { "(unknown)" }
+                    Events = $ChainObj.Events
+                    EventCount = $ChainObj.Events.Count
+                    ErrorCount = ($ChainObj.Events | Where-Object { $_.LevelDisplayName -eq 'Error' }).Count
+                }
+                # Also accumulate all events for detailed analysis mode
+                foreach ($Event in $ChainObj.Events) {
+                    $AllEventsAccumulator += $Event
+                }
+            }
         }
         else {
-            # Direct array of events
-            $Events
-        }
-        
-        # Accumulate individual events for use in end block
-        foreach ($Event in $EventsToProcess) {
-            $AllEventsAccumulator += $Event
+            # Direct array of events - single chain mode
+            $EventsToProcess = $Events
+            foreach ($Event in $EventsToProcess) {
+                $AllEventsAccumulator += $Event
+            }
         }
         
         foreach ($CurrentEvent in $EventsToProcess) {
@@ -1763,6 +1778,76 @@ function Get-CapiErrorAnalysis {
     }
     
     end {
+        # If multiple chains were piped, show summary table instead of detailed analysis
+        if ($PipelineChainCount -gt 1) {
+            Write-Host "\n=== CAPI2 Correlation Chains Summary ===" -ForegroundColor Cyan
+            Write-Host "Found $PipelineChainCount correlation chain(s) via pipeline\n" -ForegroundColor Gray
+            
+            # Build summary table with error analysis
+            $SummaryTable = @()
+            foreach ($Chain in $ChainCollection) {
+                # Get unique error names from this chain
+                $ErrorNames = @()
+                $CertificateName = "(not available)"
+                
+                foreach ($Event in $Chain.Events) {
+                    if ($Event.LevelDisplayName -eq 'Error') {
+                        try {
+                            [xml]$EventXml = $Event.DetailedMessage
+                            $ResultNodes = $EventXml.SelectNodes("//*[local-name()='Result' and @value] | //*[local-name()='Error' and @value]")
+                            
+                            foreach ($Node in $ResultNodes) {
+                                $ErrorValue = $Node.value
+                                if ($ErrorValue -ne "0" -and $ErrorValue -ne "0x0") {
+                                    $ErrorDetails = Get-CAPI2ErrorDetails -ErrorCode $ErrorValue
+                                    if ($ErrorNames -notcontains $ErrorDetails.HexCode) {
+                                        $ErrorNames += $ErrorDetails.HexCode
+                                    }
+                                }
+                            }
+                            
+                            # Extract certificate name if available
+                            if ($CertificateName -eq "(not available)") {
+                                $CertNode = $EventXml.SelectSingleNode("//Certificate[@subjectName]")
+                                if ($CertNode -and $CertNode.subjectName) {
+                                    $CertificateName = $CertNode.subjectName
+                                }
+                            }
+                        }
+                        catch {
+                            # Ignore parsing errors in summary
+                        }
+                    }
+                }
+                
+                $SummaryTable += [PSCustomObject]@{
+                    TaskID       = $Chain.TaskID
+                    Certificate  = $CertificateName
+                    TotalEvents  = $Chain.EventCount
+                    ErrorCount   = $Chain.ErrorCount
+                    Errors       = if ($ErrorNames.Count -gt 0) { $ErrorNames -join ', ' } else { "None" }
+                    HasErrors    = ($Chain.ErrorCount -gt 0)
+                }
+            }
+            
+            # Display summary table
+            $SummaryTable | Format-Table -Property @(
+                @{Label='TaskID'; Expression={$_.TaskID}; Width=40},
+                @{Label='Certificate'; Expression={$_.Certificate}; Width=30},
+                @{Label='Events'; Expression={$_.TotalEvents}; Width=7; Align='Right'},
+                @{Label='Errors'; Expression={$_.ErrorCount}; Width=7; Align='Right'},
+                @{Label='Error Types'; Expression={$_.Errors}; Width=50}
+            ) -AutoSize
+            
+            Write-Host "\n$(Get-DisplayChar 'Info') Summary Mode: Showing overview of $PipelineChainCount chains" -ForegroundColor Cyan
+            Write-Host "   Use Get-CapiAllErrors for bulk discovery and export" -ForegroundColor Gray
+            Write-Host "   For detailed analysis of specific chains:" -ForegroundColor Gray
+            Write-Host "   `$Results | Where-Object { `$_.TaskID -eq 'TARGET-TASKID' } | Get-CapiErrorAnalysis -ShowEventChain\n" -ForegroundColor DarkGray
+            
+            return
+        }
+        
+        # Single chain mode - continue with detailed analysis
         # Extract X509 certificate information from Event 90 and display at top (only when ShowEventChain is used)
         if ($ShowEventChain) {
             $CertInfo = Get-X509CertificateInfo -Events $AllEventsAccumulator

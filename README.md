@@ -711,6 +711,173 @@ $AllErrors | Format-Table TimeCreated, Certificate, ErrorCount, Errors
 
 ---
 
+### Working with Wildcard Searches and Bulk Operations
+
+When searching for certificates with wildcards (e.g., `*.com`, `*badssl*`), you may retrieve many correlation chains. The module provides different approaches depending on whether you need a summary overview or detailed analysis.
+
+#### Scenario: Wildcard Search Returns Many Chains
+
+```powershell
+# This might find 50+ correlation chains
+$Results = Find-CapiEventsByName -Name "*.com" -Hours 2
+Write-Host "Found $($Results.Count) chains"
+```
+
+#### Approach 1: Summary Table (Recommended for Many Chains) 📊
+
+When you pipe multiple chains to `Get-CapiErrorAnalysis`, it automatically detects this and shows a **summary table** instead of overwhelming detailed output:
+
+```powershell
+# Automatically shows summary table for multiple chains
+$Results = Find-CapiEventsByName -Name "*.com" -Hours 2
+$Results | Get-CapiErrorAnalysis
+
+# Output:
+# === CAPI2 Correlation Chains Summary ===
+# Found 80 correlation chain(s) via pipeline
+#
+# TaskID                                   Certificate              Events Errors Error Types
+# ------                                   -----------              ------ ------ -----------
+# 5C69DBE2-E66C-4F61-8FBD-EBE16F6610D8    expired.badssl.com           5      2 CRYPT_E_REVOCATION_OFFLINE
+# B97DE0B4-9F26-4D60-8257-0A780E02DC0A    wrong.host.badssl.com        6      1 CERT_E_UNTRUSTEDROOT
+# ...
+```
+
+**Features of Summary Mode:**
+- Shows TaskID, Certificate, total events, error count, and error types
+- Processes all chains efficiently without overwhelming output
+- Provides guidance on how to analyze specific chains in detail
+
+#### Approach 2: Use Get-CapiAllErrors for Discovery 🔍
+
+For system-wide discovery with filtering, use `Get-CapiAllErrors`:
+
+```powershell
+# Find ALL errors, then filter by certificate pattern
+Get-CapiAllErrors -Hours 2 | Where-Object { $_.Certificate -like "*.com" }
+
+# Export all matching chains to HTML reports
+Get-CapiAllErrors -Hours 2 -ExportPath "C:\Reports" | Where-Object { $_.Certificate -like "*.com" }
+```
+
+**Advantages:**
+- Automatically correlates all events for each error
+- Built-in bulk export functionality
+- Shows error counts and correlated event totals
+- Optimized for system-wide analysis
+
+#### Approach 3: Detailed Analysis of Specific Chains 🔬
+
+After identifying chains of interest, analyze them individually:
+
+```powershell
+# Find chains first
+$Results = Find-CapiEventsByName -Name "*.com" -Hours 2
+
+# Filter for chains with errors only
+$ErrorChains = $Results | Where-Object { ($_.Events | Where-Object LevelDisplayName -eq 'Error').Count -gt 0 }
+
+# Analyze first error chain in detail
+$ErrorChains | Select-Object -First 1 | Get-CapiErrorAnalysis -ShowEventChain
+
+# Or iterate through specific chains
+foreach ($Chain in $ErrorChains | Select-Object -First 5) {
+    Write-Host "\n=== Analyzing Chain: $($Chain.TaskID) ===\n" -ForegroundColor Yellow
+    Get-CapiErrorAnalysis -Events $Chain.Events -ShowEventChain
+    Read-Host "Press Enter to continue to next chain"
+}
+```
+
+#### Approach 4: Create Custom Summary 📋
+
+```powershell
+# Build your own summary with custom properties
+$Results = Find-CapiEventsByName -Name "*.com" -Hours 2
+
+$Summary = $Results | ForEach-Object {
+    $ErrorEvents = $_.Events | Where-Object LevelDisplayName -eq 'Error'
+    [PSCustomObject]@{
+        TaskID      = $_.TaskID
+        EventCount  = $_.Events.Count
+        ErrorCount  = $ErrorEvents.Count
+        FirstError  = $ErrorEvents | Select-Object -First 1 -ExpandProperty TimeCreated
+        HasErrors   = ($ErrorEvents.Count -gt 0)
+    }
+}
+
+# Show chains with errors
+$Summary | Where-Object HasErrors | Format-Table -AutoSize
+```
+
+#### Quick Reference: Handling Wildcard Search Results
+
+| Number of Chains Found | Recommended Approach | Command |
+|------------------------|---------------------|----------|
+| **1-5 chains** | Detailed individual analysis | `$Results \| Get-CapiErrorAnalysis -ShowEventChain` |
+| **5-20 chains** | Summary table first, then selective detail | `$Results \| Get-CapiErrorAnalysis` (auto-summary) |
+| **20+ chains** | Use Get-CapiAllErrors for discovery | `Get-CapiAllErrors \| Where-Object { $_.Certificate -like "*.com" }` |
+| **Need reports** | Bulk export with Get-CapiAllErrors | `Get-CapiAllErrors -ExportPath "C:\\Reports"` |
+| **Need to iterate** | foreach loop with Read-Host pauses | `foreach ($Chain in $Results) { ... }` |
+
+#### Performance Tips 💡
+
+1. **Narrow Time Windows**: Use shorter `-Hours` values to reduce results
+   ```powershell
+   Find-CapiEventsByName -Name "*.com" -Hours 1  # Instead of -Hours 24
+   ```
+
+2. **Limit Events Retrieved**: Use `-MaxEvents` to cap results
+   ```powershell
+   Find-CapiEventsByName -Name "*.com" -Hours 2 -MaxEvents 100
+   ```
+
+3. **Filter Early**: Apply filters before analysis
+   ```powershell
+   $Results | Where-Object { $_.Events.Count -gt 3 } | Get-CapiErrorAnalysis
+   ```
+
+4. **Use Specific Patterns**: Avoid overly broad wildcards
+   ```powershell
+   # Better: Specific pattern
+   Find-CapiEventsByName -Name "*badssl.com"  
+   
+   # Avoid: Too broad
+   Find-CapiEventsByName -Name "*.com"  # May return 100+ chains
+   ```
+
+#### Example: Complete Workflow
+
+```powershell
+# Step 1: Find all chains for *.badssl.com
+$Results = Find-CapiEventsByName -Name "*badssl.com" -Hours 6
+Write-Host "Found $($Results.Count) correlation chains"
+
+# Step 2: Quick summary (automatic if multiple chains)
+$Results | Get-CapiErrorAnalysis
+
+# Step 3: Filter for error chains only
+$ErrorChains = $Results | Where-Object { 
+    ($_.Events | Where-Object LevelDisplayName -eq 'Error').Count -gt 0 
+}
+Write-Host "$($ErrorChains.Count) chains have errors"
+
+# Step 4: Analyze specific chain in detail
+$TargetChain = $ErrorChains | Where-Object { $_.TaskID -eq '5C69DBE2-E66C-4F61-8FBD-EBE16F6610D8' }
+$TargetChain | Get-CapiErrorAnalysis -ShowEventChain
+
+# Step 5: Export to HTML
+Export-CapiEvents -Events $TargetChain.Events -Path "C:\Reports\badssl_error.html" `
+                  -Format HTML -IncludeErrorAnalysis -TaskID $TargetChain.TaskID
+```
+
+**Summary:** 
+- `Get-CapiErrorAnalysis` **automatically detects** when multiple chains are piped and shows a summary table
+- For bulk operations, `Get-CapiAllErrors` provides built-in correlation and export
+- Use filtering and selection to focus on specific chains for detailed analysis
+- Narrow time windows and event limits improve performance
+
+---
+
 ### Export Functions
 
 #### `Export-CapiEvents`
