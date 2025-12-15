@@ -3270,9 +3270,6 @@ function Get-CapiAllErrors {
         
         $ChainSummary = $ChainSummary | Sort-Object -Property TimeCreated -Descending
         
-        # Display summary table
-        $ChainSummary | Select-Object TimeCreated, TaskID, Certificate, ErrorCount, CorrelatedEvents, UniqueErrors, Errors | Format-Table -AutoSize -Wrap
-        
         # Show detailed analysis if requested
         if ($ShowAnalysis -and $ChainSummary.Count -gt 0) {
             Write-Host "`n=== Detailed Error Analysis ===" -ForegroundColor Cyan

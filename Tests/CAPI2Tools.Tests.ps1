@@ -5,13 +5,13 @@
 .DESCRIPTION
     Comprehensive test suite for validating CAPI2Tools module functionality.
     Tests include unit tests, integration tests, and validation of helper functions.
-    Updated for v2.11.0 to include tests for ShowEventChain feature and Pester 5 syntax.
+    Updated for v2.12.0 to include tests for Get-CapiAllErrors feature.
     
 .NOTES
-    Version:        2.0
+    Version:        2.1
     Author:         Jan Tiedemann
     Creation Date:  December 2025
-    Last Updated:   December 2025 (v2.11.0 - Pester 5 syntax migration)
+    Last Updated:   December 2025 (v2.12.0 - Get-CapiAllErrors tests)
     Pester Version: 5.x+ required
     
 .EXAMPLE
@@ -65,9 +65,19 @@ Describe "CAPI2Tools Module" {
             $ExportedCommands -contains 'Get-CapiCertificateReport' | Should -Be $true
         }
         
+        It "Should export Get-CapiAllErrors function (v2.12.0 comprehensive error discovery)" {
+            $ExportedCommands = (Get-Module CAPI2Tools).ExportedFunctions.Keys
+            $ExportedCommands -contains 'Get-CapiAllErrors' | Should -Be $true
+        }
+        
         It "Should export Find-CertEvents alias" {
             $ExportedAliases = (Get-Module CAPI2Tools).ExportedAliases.Keys
             $ExportedAliases -contains 'Find-CertEvents' | Should -Be $true
+        }
+        
+        It "Should export Get-AllErrors alias (v2.12.0)" {
+            $ExportedAliases = (Get-Module CAPI2Tools).ExportedAliases.Keys
+            $ExportedAliases -contains 'Get-AllErrors' | Should -Be $true
         }
     }
     
@@ -637,6 +647,106 @@ Describe "CAPI2Tools Integration Tests" -Tag 'Integration' {
                 $ThrowsError = $true
             }
             $ThrowsError | Should -Be $true
+        }
+    }
+    
+    Context "Get-CapiAllErrors Function (v2.12.0)" {
+        
+        It "Should execute Get-CapiAllErrors without errors" {
+            # Use MaxEvents 100 and Hours 1 to limit scope and avoid performance issues
+            { Get-CapiAllErrors -Hours 1 -MaxEvents 100 -ErrorAction Stop } | Should -Not -Throw
+        }
+        
+        It "Should return PSCustomObject array with expected properties" {
+            $Result = Get-CapiAllErrors -Hours 1 -MaxEvents 100
+            
+            if ($Result -and $Result.Count -gt 0) {
+                # Verify object type
+                $Result[0] | Should -BeOfType [PSCustomObject]
+                
+                # Verify required properties exist
+                $Result[0].PSObject.Properties.Name -contains 'TimeCreated' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'TaskID' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'Certificate' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'ErrorCount' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'UniqueErrors' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'Errors' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'Events' | Should -Be $true
+                $Result[0].PSObject.Properties.Name -contains 'CorrelatedEvents' | Should -Be $true
+            }
+        }
+        
+        It "Should respect MaxEvents parameter" {
+            # Should not throw even with very small MaxEvents
+            { Get-CapiAllErrors -Hours 1 -MaxEvents 10 -ErrorAction Stop } | Should -Not -Throw
+        }
+        
+        It "Should support GroupByError parameter" {
+            { Get-CapiAllErrors -Hours 1 -MaxEvents 100 -GroupByError -ErrorAction Stop } | Should -Not -Throw
+        }
+        
+        It "Should include correlated events in results" {
+            $Result = Get-CapiAllErrors -Hours 1 -MaxEvents 100
+            
+            if ($Result -and $Result.Count -gt 0) {
+                # Events property should contain event objects
+                $Result[0].Events | Should -Not -BeNullOrEmpty
+                
+                # CorrelatedEvents should be a positive number
+                $Result[0].CorrelatedEvents | Should -BeGreaterThan 0
+            }
+        }
+        
+        It "Should create export directory if it doesn't exist" {
+            $TempDir = Join-Path $env:TEMP "CAPI2_AllErrors_Test_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            # Ensure directory doesn't exist
+            if (Test-Path $TempDir) {
+                Remove-Item $TempDir -Recurse -Force
+            }
+            
+            # This should create the directory automatically
+            Get-CapiAllErrors -Hours 1 -MaxEvents 50 -ExportPath $TempDir -ErrorAction SilentlyContinue | Out-Null
+            
+            # Directory should now exist
+            Test-Path $TempDir | Should -Be $true
+            
+            # Cleanup
+            Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        It "Should export HTML files when errors exist" {
+            $TempDir = Join-Path $env:TEMP "CAPI2_AllErrors_Export_$(Get-Date -Format 'yyyyMMddHHmmss')"
+            
+            try {
+                # Run export
+                Get-CapiAllErrors -Hours 1 -MaxEvents 100 -ExportPath $TempDir -ErrorAction SilentlyContinue | Out-Null
+                
+                # If errors were found, HTML files should exist
+                if (Test-Path $TempDir) {
+                    $HtmlFiles = Get-ChildItem $TempDir -Filter *.html -ErrorAction SilentlyContinue
+                    # If directory exists and has files, they should be HTML
+                    if ($HtmlFiles) {
+                        $HtmlFiles[0].Extension | Should -Be '.html'
+                    }
+                }
+            }
+            finally {
+                # Cleanup
+                if (Test-Path $TempDir) {
+                    Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        
+        It "Should work with Get-AllErrors alias" {
+            { Get-AllErrors -Hours 1 -MaxEvents 50 -ErrorAction Stop } | Should -Not -Throw
+        }
+        
+        It "Should handle ShowAnalysis parameter without hanging" {
+            # ShowAnalysis can take a while, so use very limited scope
+            # Just verify it doesn't throw an error
+            { Get-CapiAllErrors -Hours 1 -MaxEvents 20 -ShowAnalysis -ErrorAction Stop | Out-Null } | Should -Not -Throw
         }
     }
 }

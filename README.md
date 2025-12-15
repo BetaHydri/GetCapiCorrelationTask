@@ -130,13 +130,14 @@ Using **TaskId** gives you 3 separate chains with correct sequences (1,2,3 for e
 
 ## 📖 Command Reference
 
-The CAPI2Tools module provides 12 functions and 5 convenient aliases for certificate validation analysis and troubleshooting.
+The CAPI2Tools module provides 13 functions and 6 convenient aliases for certificate validation analysis and troubleshooting.
 
 ### Functions
 
 | Command | Purpose |
 |---------|---------|
 | **`Get-CapiCertificateReport`** | **⭐ RECOMMENDED** - Simplified one-command solution: search, analyze, and export certificate errors in a single step. Perfect for quick diagnostics! |
+| **`Get-CapiAllErrors`** | **🔍 NEW v2.12.0** - Scan entire CAPI2 log for ALL errors, correlate with full event chains, and bulk export to HTML reports. Perfect for comprehensive error discovery! |
 | **`Find-CapiEventsByName`** | Search CAPI2 events by DNS name, certificate subject, or issuer. Returns complete correlation chains for matching certificates. |
 | **`Get-CapiTaskIDEvents`** | Retrieve all events in a correlation chain using a TaskID (GUID). Use when you have a specific TaskID from event logs. |
 | **`Get-CapiErrorAnalysis`** | Analyze events for errors and display comprehensive error tables with severity levels, descriptions, common causes, and resolution steps. |
@@ -182,6 +183,10 @@ Clear-CAPI2EventLog     # or Clear-CapiLog
 
 # Check log status
 Get-CAPI2EventLogStatus
+
+# Find ALL errors system-wide (v2.12.0)
+Get-CapiAllErrors -Hours 24
+Get-AllErrors -ExportPath "C:\Reports"  # Using alias with bulk export
 
 # Analyze and export (using pipeline support)
 Find-CertEvents -Name "example.com" | Get-CapiErrorAnalysis
@@ -514,6 +519,55 @@ Retrieves all CAPI2 events that share the same correlation TaskID.
 
 ---
 
+#### `Get-CapiAllErrors` 🆕 **v2.12.0**
+Scans the entire CAPI2 event log for ALL errors, automatically correlates them with full event chains, and optionally exports bulk HTML reports. Perfect for comprehensive error discovery and system-wide certificate validation analysis.
+
+**Parameters**:
+- `Hours`: Hours to look back (default: 24)
+- `MaxEvents`: Maximum events to scan (default: 5000)
+- `GroupByError`: Group results by error type instead of TaskID
+- `ExportPath`: Directory path for bulk HTML export of all error chains
+- `ShowAnalysis`: Display detailed interactive error analysis for each chain
+
+**Returns**: Array of error summary objects with full correlated event chains
+
+**Example**:
+```powershell
+# Simple scan for all errors in last 24 hours
+Get-CapiAllErrors
+
+# Scan last week and export to HTML reports
+Get-CapiAllErrors -Hours 168 -ExportPath "C:\CAPI2Reports"
+
+# Group by error type to see statistics
+Get-CapiAllErrors -GroupByError
+
+# Interactive detailed analysis
+Get-CapiAllErrors -ShowAnalysis
+
+# Comprehensive analysis with export
+Get-CapiAllErrors -Hours 48 -ExportPath "C:\Reports" -ShowAnalysis
+```
+
+**Output Properties**:
+- `TimeCreated`: When the first error occurred
+- `TaskID`: Correlation TaskID for the validation chain
+- `Certificate`: Certificate subject name (if available)
+- `ErrorCount`: Number of error events in this chain
+- `CorrelatedEvents`: Total events in full correlated chain
+- `UniqueErrors`: Count of distinct error types
+- `Errors`: List of error names (CERT_E_UNTRUSTEDROOT, etc.)
+- `Events`: Full array of correlated event objects
+
+**Use Cases**:
+- Discover all certificate validation failures system-wide
+- Identify recurring certificate issues across multiple chains
+- Export comprehensive error reports for documentation
+- Compare error patterns before/after certificate updates
+- Audit certificate trust issues across the organization
+
+---
+
 ### Analysis Functions
 
 #### `Get-CapiErrorAnalysis`
@@ -771,7 +825,53 @@ Find-CapiEventsByName -Name "*" -Hours 48 -FilterType PolicyValidation |
 - 🤖 Automation scenarios where you need to process each chain individually
 - 📈 Generating separate reports for each correlation chain found
 
-### Example 4: View X.509 Certificate Information (NEW in v2.12.0)
+### Example 4: Comprehensive Error Discovery (NEW in v2.12.0) 🔍
+
+Scan the entire CAPI2 log for ALL errors with automatic correlation and bulk export:
+
+```powershell
+# Scan for all errors in last 24 hours
+Get-CapiAllErrors
+
+# Output shows summary table:
+# TimeCreated         TaskID                               Certificate     ErrorCount CorrelatedEvents UniqueErrors Errors
+# -----------         ------                               -----------     ---------- ---------------- ------------ ------
+# 15/12/2025 11:42:19 22534685-2E5D-476C-947A-8B0FE5375FF5 (not available)          1                1            1 CERT_E_UNTRUSTEDROOT
+# 15/12/2025 11:40:30 7FC3A9ED-88A1-4FFB-A8EE-33E3C1BBBF33 server.com               2                5            1 CERT_E_EXPIRED
+
+# Scan last week and export ALL error chains to HTML reports
+Get-CapiAllErrors -Hours 168 -ExportPath "C:\CAPI2Reports"
+# Creates: Error_ServerName_TaskID.html for each error chain
+
+# Group by error type to see statistics
+Get-CapiAllErrors -GroupByError
+# Output shows:
+# ErrorName            ErrorCode Occurrences Affected Chains Description
+# CERT_E_UNTRUSTEDROOT 800B0109            7               7 A certificate chain processed but terminated in a root certificate...
+# CERT_E_EXPIRED       800B0101            3               3 A required certificate is not within its validity period...
+
+# Interactive detailed analysis for each error chain
+Get-CapiAllErrors -ShowAnalysis
+# Displays Get-CapiErrorAnalysis for each chain with pause between them
+
+# Use alias for quick discovery
+Get-AllErrors -Hours 48
+```
+
+**Use Cases:**
+- 🔍 **System-wide audit**: Find ALL certificate errors, not just one certificate
+- 📊 **Error statistics**: Group by error type to identify most common issues
+- 📄 **Bulk documentation**: Export every error chain to HTML in one command
+- 🏢 **Enterprise reporting**: Analyze certificate trust issues across the organization
+- ⚡ **Quick triage**: See all errors at a glance with correlation counts
+
+**When to use Get-CapiAllErrors vs. Find-CapiEventsByName:**
+- Use `Get-CapiAllErrors`: When you don't know what certificates have errors, need comprehensive discovery
+- Use `Find-CapiEventsByName`: When you know the specific certificate/domain to analyze
+
+---
+
+### Example 5: View X.509 Certificate Information (NEW in v2.12.0)
 
 Display detailed certificate information including Subject Alternative Names (SANs), DNS names, UPNs, and validity periods:
 
