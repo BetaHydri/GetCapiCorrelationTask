@@ -1668,18 +1668,26 @@ function Get-CapiErrorAnalysis {
             # Piped from Find-CapiEventsByName - track each chain separately
             foreach ($ChainObj in $Events) {
                 $PipelineChainCount++
-                $ChainCollection += [PSCustomObject]@{
-                    ChainNumber = $PipelineChainCount
-                    TaskID = if ($ChainObj.TaskID) { $ChainObj.TaskID } else { "(unknown)" }
-                    Events = $ChainObj.Events
-                    EventCount = $ChainObj.Events.Count
-                    ErrorCount = ($ChainObj.Events | Where-Object { $_.LevelDisplayName -eq 'Error' }).Count
+                
+                # Only add unique TaskIDs to avoid duplicates
+                $ExistingChain = $ChainCollection | Where-Object { $_.TaskID -eq $ChainObj.TaskID }
+                if (-not $ExistingChain) {
+                    $ChainCollection += [PSCustomObject]@{
+                        ChainNumber = $PipelineChainCount
+                        TaskID      = if ($ChainObj.TaskID) { $ChainObj.TaskID } else { "(unknown)" }
+                        Events      = $ChainObj.Events
+                        EventCount  = $ChainObj.Events.Count
+                        ErrorCount  = ($ChainObj.Events | Where-Object { $_.LevelDisplayName -eq 'Error' }).Count
+                    }
                 }
+                
                 # Also accumulate all events for detailed analysis mode
                 foreach ($Event in $ChainObj.Events) {
                     $AllEventsAccumulator += $Event
                 }
             }
+            # Early return - don't process events individually when in multi-chain mode
+            return
         }
         else {
             # Direct array of events - single chain mode
@@ -1821,25 +1829,25 @@ function Get-CapiErrorAnalysis {
                 }
                 
                 $SummaryTable += [PSCustomObject]@{
-                    TaskID       = $Chain.TaskID
-                    Certificate  = $CertificateName
-                    TotalEvents  = $Chain.EventCount
-                    ErrorCount   = $Chain.ErrorCount
-                    Errors       = if ($ErrorNames.Count -gt 0) { $ErrorNames -join ', ' } else { "None" }
-                    HasErrors    = ($Chain.ErrorCount -gt 0)
+                    TaskID      = $Chain.TaskID
+                    Certificate = $CertificateName
+                    TotalEvents = $Chain.EventCount
+                    ErrorCount  = $Chain.ErrorCount
+                    Errors      = if ($ErrorNames.Count -gt 0) { $ErrorNames -join ', ' } else { "None" }
+                    HasErrors   = ($Chain.ErrorCount -gt 0)
                 }
             }
             
             # Display summary table
             $SummaryTable | Format-Table -Property @(
-                @{Label='TaskID'; Expression={$_.TaskID}; Width=40},
-                @{Label='Certificate'; Expression={$_.Certificate}; Width=30},
-                @{Label='Events'; Expression={$_.TotalEvents}; Width=7; Align='Right'},
-                @{Label='Errors'; Expression={$_.ErrorCount}; Width=7; Align='Right'},
-                @{Label='Error Types'; Expression={$_.Errors}; Width=50}
+                @{Label = 'TaskID'; Expression = { $_.TaskID }; Width = 40 },
+                @{Label = 'Certificate'; Expression = { $_.Certificate }; Width = 30 },
+                @{Label = 'Events'; Expression = { $_.TotalEvents }; Width = 7; Align = 'Right' },
+                @{Label = 'Errors'; Expression = { $_.ErrorCount }; Width = 7; Align = 'Right' },
+                @{Label = 'Error Types'; Expression = { $_.Errors }; Width = 50 }
             ) -AutoSize
             
-            Write-Host "\n$(Get-DisplayChar 'Info') Summary Mode: Showing overview of $PipelineChainCount chains" -ForegroundColor Cyan
+            Write-Host "\n$(Get-DisplayChar 'Lightbulb') Summary Mode: Showing overview of $PipelineChainCount chains" -ForegroundColor Cyan
             Write-Host "   Use Get-CapiAllErrors for bulk discovery and export" -ForegroundColor Gray
             Write-Host "   For detailed analysis of specific chains:" -ForegroundColor Gray
             Write-Host "   `$Results | Where-Object { `$_.TaskID -eq 'TARGET-TASKID' } | Get-CapiErrorAnalysis -ShowEventChain\n" -ForegroundColor DarkGray
