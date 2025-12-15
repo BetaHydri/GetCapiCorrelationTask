@@ -871,6 +871,335 @@ Get-AllErrors -Hours 48
 
 ---
 
+### Example 4a: Professional System-Wide Certificate Audit (Get-CapiAllErrors Advanced) 🏢
+
+For IT professionals managing enterprise environments, `Get-CapiAllErrors` provides comprehensive certificate health monitoring and troubleshooting:
+
+#### **Scenario 1: Daily Certificate Health Check**
+
+```powershell
+# Morning routine: Check all certificate errors from last 24 hours
+$ErrorSummary = Get-CapiAllErrors -Hours 24
+
+# Display summary for quick overview
+$ErrorSummary | Format-Table TimeCreated, Certificate, ErrorCount, CorrelatedEvents, Errors -AutoSize
+
+# Output example:
+# TimeCreated         Certificate                    ErrorCount CorrelatedEvents Errors
+# -----------         -----------                    ---------- ---------------- ------
+# 15/12/2025 08:15:22 internal-app.contoso.com                2                5 CERT_E_UNTRUSTEDROOT
+# 15/12/2025 09:42:11 legacy-api.contoso.com                  1                3 CERT_E_EXPIRED
+# 15/12/2025 10:13:45 vpn.contoso.com                         3                7 CRYPT_E_REVOCATION_OFFLINE
+
+# Investigate specific error chain
+$ErrorSummary[0].Events | Get-CapiErrorAnalysis -ShowEventChain
+
+# Quick export for documentation
+$ErrorSummary | Export-Csv "C:\Reports\Daily_Cert_Errors_$(Get-Date -Format 'yyyyMMdd').csv" -NoTypeInformation
+```
+
+#### **Scenario 2: Enterprise-Wide Error Statistics**
+
+```powershell
+# Get error statistics grouped by type
+Get-CapiAllErrors -Hours 168 -GroupByError | Format-Table -AutoSize
+
+# Output shows most common issues:
+# ErrorName                    ErrorCode Occurrences Affected Chains Description
+# ---------                    --------- ----------- --------------- -----------
+# CERT_E_UNTRUSTEDROOT         800B0109           45              45 Root certificate not trusted
+# CRYPT_E_REVOCATION_OFFLINE   80092013           23              23 Revocation server offline
+# CERT_E_EXPIRED               800B0101           12              12 Certificate has expired
+# CERT_E_CHAINING              800B010A            8               8 Cannot build certificate chain
+
+# Identify top problem areas for remediation planning
+```
+
+#### **Scenario 3: Incident Response - System-Wide Certificate Failure**
+
+```powershell
+# Emergency: Multiple applications reporting certificate errors
+Write-Host "`n=== INCIDENT RESPONSE: Certificate Error Surge ===" -ForegroundColor Red
+
+# Step 1: Quick triage - find all errors in last 2 hours
+$RecentErrors = Get-CapiAllErrors -Hours 2 -MaxEvents 10000
+
+Write-Host "`nTotal Error Chains Found: $($RecentErrors.Count)" -ForegroundColor Yellow
+Write-Host "Affected Certificates:" -ForegroundColor Cyan
+$RecentErrors | Select-Object -Unique Certificate | Format-Table
+
+# Step 2: Identify if it's a specific error pattern
+$ErrorTypes = $RecentErrors | Group-Object Errors | Sort-Object Count -Descending
+Write-Host "`nMost Common Error:" -ForegroundColor Cyan
+$ErrorTypes[0] | Select-Object Count, Name
+
+# Step 3: Check if specific time correlation (e.g., after server restart)
+Write-Host "`nError Timeline:" -ForegroundColor Cyan
+$RecentErrors | Select-Object TimeCreated, Certificate -First 10 | Format-Table
+
+# Step 4: Export all for deep analysis
+$ExportPath = "C:\Incident_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+Get-CapiAllErrors -Hours 2 -ExportPath $ExportPath
+Write-Host "`n✓ Exported all error chains to: $ExportPath" -ForegroundColor Green
+
+# Step 5: Generate executive summary
+$Summary = @"
+=== CERTIFICATE INCIDENT SUMMARY ===
+Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Total Affected Chains: $($RecentErrors.Count)
+Most Common Error: $($ErrorTypes[0].Name) ($($ErrorTypes[0].Count) occurrences)
+Affected Certificates: $(@($RecentErrors.Certificate | Select-Object -Unique).Count)
+
+Top 5 Affected Certificates:
+$($RecentErrors | Group-Object Certificate | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "  - $($_.Name) ($($_.Count) errors)" } | Out-String)
+
+Recommended Actions:
+1. Review exported reports in: $ExportPath
+2. Check certificate store integrity
+3. Verify certificate trust chain
+4. Check network connectivity to CRL/OCSP servers
+"@
+
+$Summary | Out-File "C:\Incident_Summary_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+Write-Host $Summary
+```
+
+#### **Scenario 4: Post-Certificate-Update Validation**
+
+```powershell
+# After deploying new certificates via Group Policy
+Write-Host "`n=== Post-Deployment Certificate Validation ===" -ForegroundColor Cyan
+
+# Capture baseline before deployment
+Write-Host "`nStep 1: Capturing pre-deployment baseline..." -ForegroundColor Yellow
+$BeforeDeployment = Get-CapiAllErrors -Hours 2
+Write-Host "Errors before: $($BeforeDeployment.Count)" -ForegroundColor White
+
+# Wait for certificate deployment
+Write-Host "`nWaiting for certificate deployment (10 minutes)..." -ForegroundColor Yellow
+Start-Sleep -Seconds 600
+
+# Clear CAPI2 log and wait for new activity
+Clear-CAPI2EventLog
+Write-Host "Waiting for applications to generate new certificate events (5 minutes)..." -ForegroundColor Yellow
+Start-Sleep -Seconds 300
+
+# Capture after deployment
+Write-Host "`nStep 2: Analyzing post-deployment state..." -ForegroundColor Yellow
+$AfterDeployment = Get-CapiAllErrors -Hours 1
+
+Write-Host "`n=== Validation Results ===" -ForegroundColor Cyan
+Write-Host "Errors after: $($AfterDeployment.Count)" -ForegroundColor White
+
+if ($AfterDeployment.Count -lt $BeforeDeployment.Count) {
+    $Improvement = $BeforeDeployment.Count - $AfterDeployment.Count
+    Write-Host "✓ IMPROVEMENT: $Improvement fewer error chains!" -ForegroundColor Green
+} elseif ($AfterDeployment.Count -gt $BeforeDeployment.Count) {
+    $Degradation = $AfterDeployment.Count - $BeforeDeployment.Count
+    Write-Host "⚠ WARNING: $Degradation MORE error chains!" -ForegroundColor Red
+    Write-Host "Investigating new errors..." -ForegroundColor Yellow
+    
+    # Show new error types
+    $NewErrors = $AfterDeployment | Where-Object { 
+        $_.Certificate -notin $BeforeDeployment.Certificate 
+    }
+    
+    if ($NewErrors) {
+        Write-Host "`nNew Errors Detected:" -ForegroundColor Red
+        $NewErrors | Format-Table Certificate, Errors -AutoSize
+    }
+} else {
+    Write-Host "→ No change in error count" -ForegroundColor Yellow
+}
+
+# Generate deployment validation report
+$ValidationReport = @"
+=== Certificate Deployment Validation Report ===
+Deployment Time: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+
+Before Deployment: $($BeforeDeployment.Count) error chains
+After Deployment:  $($AfterDeployment.Count) error chains
+Change:           $(if($AfterDeployment.Count -lt $BeforeDeployment.Count){"✓ -$($BeforeDeployment.Count - $AfterDeployment.Count) (IMPROVED)"}elseif($AfterDeployment.Count -gt $BeforeDeployment.Count){"⚠ +$($AfterDeployment.Count - $BeforeDeployment.Count) (DEGRADED)"}else{"→ No change"})
+
+Post-Deployment Errors by Type:
+$(Get-CapiAllErrors -Hours 1 -GroupByError | Out-String)
+
+Status: $(if($AfterDeployment.Count -eq 0){"✓ SUCCESS - All certificate errors resolved"}elseif($AfterDeployment.Count -lt $BeforeDeployment.Count){"✓ PARTIAL SUCCESS - Errors reduced"}else{"⚠ NEEDS ATTENTION - Review remaining errors"})
+"@
+
+$ValidationReport | Out-File "C:\CertDeployment_Validation_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+Write-Host "`n✓ Validation report saved" -ForegroundColor Green
+```
+
+#### **Scenario 5: Compliance Audit - Certificate Trust Issues**
+
+```powershell
+# Monthly audit: Identify all untrusted certificate chains
+Write-Host "`n=== Monthly Certificate Trust Audit ===" -ForegroundColor Cyan
+
+# Get all errors from last month
+$AllErrors = Get-CapiAllErrors -Hours 720 -MaxEvents 50000
+
+# Filter for trust-related errors
+$TrustIssues = $AllErrors | Where-Object { 
+    $_.Errors -match 'UNTRUSTEDROOT|CHAINING|PARTIALCHAIN' 
+}
+
+Write-Host "`nTrust Issues Found: $($TrustIssues.Count)" -ForegroundColor Yellow
+
+# Group by certificate for compliance tracking
+$CertificateReport = $TrustIssues | Group-Object Certificate | Select-Object @{
+    N='Certificate'; E={$_.Name}
+}, @{
+    N='ErrorOccurrences'; E={$_.Count}
+}, @{
+    N='FirstSeen'; E={($_.Group | Sort-Object TimeCreated | Select-Object -First 1).TimeCreated}
+}, @{
+    N='LastSeen'; E={($_.Group | Sort-Object TimeCreated -Descending | Select-Object -First 1).TimeCreated}
+}, @{
+    N='ErrorTypes'; E={($_.Group.Errors | Select-Object -Unique) -join ', '}
+}
+
+# Display certificates requiring attention
+$CertificateReport | Sort-Object ErrorOccurrences -Descending | Format-Table -AutoSize
+
+# Export for compliance documentation
+$AuditPath = "C:\Compliance\CertAudit_$(Get-Date -Format 'yyyyMM')"
+if (-not (Test-Path $AuditPath)) { New-Item -Path $AuditPath -ItemType Directory | Out-Null }
+
+# Export summary
+$CertificateReport | Export-Csv "$AuditPath\Trust_Issues_Summary.csv" -NoTypeInformation
+
+# Export detailed HTML reports for each problematic certificate
+foreach ($Cert in ($CertificateReport | Select-Object -First 10)) {
+    $CertErrors = $TrustIssues | Where-Object { $_.Certificate -eq $Cert.Certificate }
+    foreach ($Error in $CertErrors) {
+        if ($Error.Events -and $Error.Events.Count -gt 0) {
+            $SafeCertName = ($Cert.Certificate -replace '[\\/:*?"<>|]', '_').Substring(0, [Math]::Min(50, $Cert.Certificate.Length))
+            $FileName = "$AuditPath\${SafeCertName}_$($Error.TaskID.Substring(0,8)).html"
+            Export-CapiEvents -Events $Error.Events -Path $FileName -Format HTML -IncludeErrorAnalysis -TaskID $Error.TaskID
+        }
+    }
+}
+
+Write-Host "✓ Compliance audit reports exported to: $AuditPath" -ForegroundColor Green
+
+# Generate executive summary for compliance team
+$ComplianceSummary = @"
+=== CERTIFICATE TRUST COMPLIANCE AUDIT ===
+Audit Period: Last 30 days
+Audit Date: $(Get-Date -Format 'yyyy-MM-dd')
+
+Summary:
+- Total Certificate Trust Issues: $($TrustIssues.Count)
+- Unique Certificates Affected: $($CertificateReport.Count)
+- Most Common Error: $(($TrustIssues | Group-Object Errors | Sort-Object Count -Descending | Select-Object -First 1).Name)
+
+Top 10 Problematic Certificates:
+$($CertificateReport | Select-Object -First 10 | ForEach-Object { "  $($_.ErrorOccurrences). $($_.Certificate) - $($_.ErrorTypes)" } | Out-String)
+
+Compliance Status: $(if($TrustIssues.Count -eq 0){"✓ PASS - No trust issues detected"}else{"⚠ REVIEW REQUIRED - $($TrustIssues.Count) trust issues need remediation"})
+
+Detailed Reports: $AuditPath
+"@
+
+$ComplianceSummary | Out-File "$AuditPath\Executive_Summary.txt"
+Write-Host "`n$ComplianceSummary"
+```
+
+#### **Scenario 6: Proactive Monitoring - Automated Daily Report**
+
+```powershell
+# Scheduled task: Daily certificate health report (run at 6 AM)
+$ReportDate = Get-Date -Format 'yyyy-MM-dd'
+$ReportPath = "C:\DailyReports\CAPI2_$ReportDate"
+
+# Create report directory
+if (-not (Test-Path $ReportPath)) { New-Item -Path $ReportPath -ItemType Directory | Out-Null }
+
+# Scan last 24 hours with comprehensive export
+Get-CapiAllErrors -Hours 24 -MaxEvents 10000 -ExportPath "$ReportPath\Errors"
+
+# Get statistics
+$AllErrors = Get-CapiAllErrors -Hours 24
+$ErrorStats = Get-CapiAllErrors -Hours 24 -GroupByError
+
+# Generate daily summary report
+$DailyReport = @"
+=================================
+  DAILY CERTIFICATE HEALTH REPORT
+=================================
+Date: $ReportDate
+Report Period: Last 24 hours
+
+SUMMARY:
+--------
+Total Error Chains: $($AllErrors.Count)
+Unique Certificates: $(@($AllErrors.Certificate | Select-Object -Unique).Count)
+Total Errors: $(($AllErrors | Measure-Object ErrorCount -Sum).Sum)
+
+ERROR BREAKDOWN:
+----------------
+$($ErrorStats | Format-Table ErrorName, Occurrences, Description -AutoSize | Out-String)
+
+TOP 5 AFFECTED CERTIFICATES:
+-----------------------------
+$($AllErrors | Group-Object Certificate | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object { "$($_.Count)x - $($_.Name)" } | Out-String)
+
+HEALTH STATUS:
+--------------
+$(if($AllErrors.Count -eq 0){"✓ HEALTHY - No certificate errors detected"}elseif($AllErrors.Count -lt 10){"✓ GOOD - Minor issues detected, monitoring"}elseif($AllErrors.Count -lt 50){"⚠ ATTENTION - Moderate issues, review recommended"}else{"❌ CRITICAL - Significant issues, immediate action required"})
+
+RECOMMENDATIONS:
+----------------
+$(if($AllErrors.Count -gt 0){
+    $Recommendations = @()
+    if($ErrorStats | Where-Object { $_.ErrorName -eq 'CERT_E_EXPIRED' }) { $Recommendations += "• Renew expired certificates immediately" }
+    if($ErrorStats | Where-Object { $_.ErrorName -eq 'CERT_E_UNTRUSTEDROOT' }) { $Recommendations += "• Deploy root CA certificates via Group Policy" }
+    if($ErrorStats | Where-Object { $_.ErrorName -match 'REVOCATION' }) { $Recommendations += "• Check network connectivity to CRL/OCSP endpoints" }
+    if($ErrorStats | Where-Object { $_.ErrorName -eq 'CERT_E_CHAINING' }) { $Recommendations += "• Install missing intermediate certificates" }
+    $Recommendations -join "`n"
+}else{"None - System is healthy"})
+
+Detailed Reports: $ReportPath\Errors
+Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+"@
+
+$DailyReport | Out-File "$ReportPath\Daily_Summary.txt"
+
+# Send email alert if critical issues detected
+if ($AllErrors.Count -gt 50) {
+    Send-MailMessage -To "it-team@contoso.com" `
+                     -From "certmonitor@contoso.com" `
+                     -Subject "⚠ CRITICAL: Certificate Health Alert - $ReportDate" `
+                     -Body $DailyReport `
+                     -SmtpServer "smtp.contoso.com" `
+                     -Attachments "$ReportPath\Daily_Summary.txt"
+}
+
+Write-Host $DailyReport
+```
+
+**Professional Use Cases Summary:**
+
+| Scenario | Command | When to Use |
+|----------|---------|-------------|
+| **Daily Health Check** | `Get-CapiAllErrors -Hours 24` | Morning routine to identify overnight issues |
+| **Error Statistics** | `Get-CapiAllErrors -GroupByError` | Identify most common certificate problems |
+| **Incident Response** | `Get-CapiAllErrors -Hours 2 -ExportPath C:\Incident` | Quick bulk export during emergencies |
+| **Post-Update Validation** | Compare before/after `Get-CapiAllErrors` | Verify certificate deployments successful |
+| **Compliance Audit** | `Get-CapiAllErrors -Hours 720` | Monthly trust chain compliance review |
+| **Automated Monitoring** | Scheduled `Get-CapiAllErrors` with reports | Proactive daily certificate health checks |
+
+**Professional Tips:**
+- 💼 **Use `-MaxEvents`** to control scan size in large environments (default: 5000)
+- 📊 **Pipeline to CSV** for Excel analysis: `Get-CapiAllErrors | Export-Csv report.csv`
+- 🔍 **Filter results** for specific certificates: `Get-CapiAllErrors | Where-Object { $_.Certificate -like '*contoso*' }`
+- 📈 **Track trends** by comparing daily `Get-CapiAllErrors` results over time
+- ⚡ **Quick alias** for interactive use: `Get-AllErrors` instead of full function name
+
+---
+
 ### Example 5: View X.509 Certificate Information (NEW in v2.12.0)
 
 Display detailed certificate information including Subject Alternative Names (SANs), DNS names, UPNs, and validity periods:
