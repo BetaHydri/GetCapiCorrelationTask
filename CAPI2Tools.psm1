@@ -1844,119 +1844,119 @@ function Get-CapiErrorAnalysis {
         
         # Display event chain if requested
         if ($ShowEventChain -and $AllEventsAccumulator.Count -gt 0) {
-                Write-Host "`n=== CAPI2 Correlation Chain Events ===" -ForegroundColor Cyan
-                Write-Host "Total events in chain: $($AllEventsAccumulator.Count)" -ForegroundColor Gray
-                Write-Host "Events are sorted by AuxInfo sequence number`n" -ForegroundColor Gray
+            Write-Host "`n=== CAPI2 Correlation Chain Events ===" -ForegroundColor Cyan
+            Write-Host "Total events in chain: $($AllEventsAccumulator.Count)" -ForegroundColor Gray
+            Write-Host "Events are sorted by AuxInfo sequence number`n" -ForegroundColor Gray
             
-                $ChainSummary = Get-EventChainSummary -Events $AllEventsAccumulator
+            $ChainSummary = Get-EventChainSummary -Events $AllEventsAccumulator
             
-                # Check for duplicate sequence numbers (indicates mixed TaskIds)
-                $SequenceGroups = $ChainSummary | Where-Object { $_.Sequence -ne $null -and $_.Sequence -ne "" } | Group-Object -Property Sequence
-                $DuplicateSequences = $SequenceGroups | Where-Object { $_.Count -gt 1 }
+            # Check for duplicate sequence numbers (indicates mixed TaskIds)
+            $SequenceGroups = $ChainSummary | Where-Object { $_.Sequence -ne $null -and $_.Sequence -ne "" } | Group-Object -Property Sequence
+            $DuplicateSequences = $SequenceGroups | Where-Object { $_.Count -gt 1 }
             
-                if ($DuplicateSequences) {
-                    $WarnSymbol = [char]0x26A0  # ⚠
-                    $BulbSymbol = [char]0x2600  # ☀ (sun/bright idea)
-                    $Bullet = '*'
-                    Write-Host "$WarnSymbol  WARNING: Duplicate sequence numbers detected!" -ForegroundColor Yellow
-                    Write-Host "   This indicates events from multiple validation attempts are mixed together." -ForegroundColor Yellow
-                    Write-Host "`n   What's happening:" -ForegroundColor Cyan
-                    Write-Host "   $Bullet Same certificate was validated multiple times" -ForegroundColor Gray
-                    Write-Host "   $Bullet Each validation got a different TaskId with its own sequence (1, 2, 3...)" -ForegroundColor Gray
-                    Write-Host "   $Bullet Events retrieved by chainRef mixed different validation attempts" -ForegroundColor Gray
-                    Write-Host "   $Bullet Result: Events from 2+ operations share sequence numbers" -ForegroundColor Gray
-                    Write-Host "`n   $BulbSymbol Recommendation:" -ForegroundColor Cyan
-                    Write-Host "   $Bullet Use Get-CapiTaskIDEvents with a specific TaskID for clean sequences" -ForegroundColor Gray
-                    Write-Host "   $Bullet Use a narrower time window to isolate single validation attempts" -ForegroundColor Gray
-                    Write-Host "   $Bullet See README 'Understanding CAPI2 Event Correlation' section`n" -ForegroundColor Gray
-                }
-            
-                $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory, TaskID -AutoSize
+            if ($DuplicateSequences) {
+                $WarnSymbol = [char]0x26A0  # ⚠
+                $BulbSymbol = [char]0x2600  # ☀ (sun/bright idea)
+                $Bullet = '*'
+                Write-Host "$WarnSymbol  WARNING: Duplicate sequence numbers detected!" -ForegroundColor Yellow
+                Write-Host "   This indicates events from multiple validation attempts are mixed together." -ForegroundColor Yellow
+                Write-Host "`n   What's happening:" -ForegroundColor Cyan
+                Write-Host "   $Bullet Same certificate was validated multiple times" -ForegroundColor Gray
+                Write-Host "   $Bullet Each validation got a different TaskId with its own sequence (1, 2, 3...)" -ForegroundColor Gray
+                Write-Host "   $Bullet Events retrieved by chainRef mixed different validation attempts" -ForegroundColor Gray
+                Write-Host "   $Bullet Result: Events from 2+ operations share sequence numbers" -ForegroundColor Gray
+                Write-Host "`n   $BulbSymbol Recommendation:" -ForegroundColor Cyan
+                Write-Host "   $Bullet Use Get-CapiTaskIDEvents with a specific TaskID for clean sequences" -ForegroundColor Gray
+                Write-Host "   $Bullet Use a narrower time window to isolate single validation attempts" -ForegroundColor Gray
+                Write-Host "   $Bullet See README 'Understanding CAPI2 Event Correlation' section`n" -ForegroundColor Gray
             }
-        
-            if ($ErrorTable.Count -eq 0) {
-                if ($ShowEventChain) {
-                    Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
-                    Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
-                }
-                else {
-                    Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
-                    Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
-                }
-                return
-            }
-        
-            Write-Host "`n=== CAPI2 Error Analysis ===" -ForegroundColor Cyan
-            Write-Host "Found $($ErrorTable.Count) error(s) in the certificate validation chain.`n" -ForegroundColor Yellow
-        
-            # Display detailed error table
-            $ErrorTable | Format-Table -Property TimeCreated, Severity, ErrorName, Certificate, Thumbprint, Description -AutoSize -Wrap
-        
-            Write-Host "`n=== Detailed Error Information ===" -ForegroundColor Cyan
-        
-            foreach ($ErrorEntry in $ErrorTable) {
-                Write-Host "`n[$($ErrorEntry.Severity)] $($ErrorEntry.ErrorName) - $($ErrorEntry.ErrorCode)" -ForegroundColor $(
-                    switch ($ErrorEntry.Severity) {
-                        "Critical" { "Red" }
-                        "Error" { "Red" }
-                        "Warning" { "Yellow" }
-                        default { "White" }
-                    }
-                )
-                Write-Host "  Certificate:   $($ErrorEntry.Certificate)" -ForegroundColor Gray
-                if ($ErrorEntry.Thumbprint) {
-                    Write-Host "  Thumbprint:    $($ErrorEntry.Thumbprint)" -ForegroundColor Gray
-                }
-                if ($ErrorEntry.Issuer) {
-                    Write-Host "  Issuer:        $($ErrorEntry.Issuer)" -ForegroundColor Gray
-                }
-                Write-Host "  Description:   $($ErrorEntry.Description)" -ForegroundColor White
-                Write-Host "  Common Cause:  $($ErrorEntry.CommonCause)" -ForegroundColor Yellow
-                Write-Host "  Resolution:    $($ErrorEntry.Resolution)" -ForegroundColor Green
             
-                # Display TrustStatus details if available
-                if ($ErrorEntry.TrustStatus) {
-                    $Trust = $ErrorEntry.TrustStatus
-                
-                    if ($Trust.ErrorFlags.Count -gt 0) {
-                        Write-Host "`n  Trust Chain Validation Errors:" -ForegroundColor Red
-                        foreach ($Flag in $Trust.ErrorFlags) {
-                            $FlagColor = switch ($Flag.Severity) {
-                                'Critical' { 'Red' }
-                                'Error' { 'Red' }
-                                'Warning' { 'Yellow' }
-                                default { 'White' }
-                            }
-                            Write-Host "    $(Get-DisplayChar 'Warning') [$($Flag.Severity)] $($Flag.Flag)" -ForegroundColor $FlagColor
-                            Write-Host "       $($Flag.Description)" -ForegroundColor Gray
-                        }
-                    }
-                
-                    if ($Trust.InfoFlags.Count -gt 0) {
-                        Write-Host "`n  Trust Chain Information:" -ForegroundColor Cyan
-                        foreach ($Flag in $Trust.InfoFlags) {
-                            Write-Host "    $(Get-DisplayChar 'Checkmark') $($Flag.Flag)" -ForegroundColor Gray
-                            Write-Host "       $($Flag.Description)" -ForegroundColor DarkGray
-                        }
-                    }
-                }
-            }
-        
-            # Display summary if requested
-            if ($IncludeSummary) {
-                Write-Host "`n=== Error Summary ===" -ForegroundColor Cyan
-                $ErrorSummary.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object {
-                    Write-Host "  $($_.Key): $($_.Value) occurrence(s)" -ForegroundColor White
-                }
-            }
-        
-            # Return the error table for further processing
-            return $ErrorTable
+            $ChainSummary | Format-Table -Property Sequence, TimeCreated, Level, EventID, TaskCategory, TaskID -AutoSize
         }
+        
+        if ($ErrorTable.Count -eq 0) {
+            if ($ShowEventChain) {
+                Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
+                Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
+            }
+            else {
+                Write-Host "`n$(Get-DisplayChar 'Checkmark') No errors found in the certificate validation chain!" -ForegroundColor Green
+                Write-Host "  All certificate operations completed successfully." -ForegroundColor Gray
+            }
+            return
+        }
+        
+        Write-Host "`n=== CAPI2 Error Analysis ===" -ForegroundColor Cyan
+        Write-Host "Found $($ErrorTable.Count) error(s) in the certificate validation chain.`n" -ForegroundColor Yellow
+        
+        # Display detailed error table
+        $ErrorTable | Format-Table -Property TimeCreated, Severity, ErrorName, Certificate, Thumbprint, Description -AutoSize -Wrap
+        
+        Write-Host "`n=== Detailed Error Information ===" -ForegroundColor Cyan
+        
+        foreach ($ErrorEntry in $ErrorTable) {
+            Write-Host "`n[$($ErrorEntry.Severity)] $($ErrorEntry.ErrorName) - $($ErrorEntry.ErrorCode)" -ForegroundColor $(
+                switch ($ErrorEntry.Severity) {
+                    "Critical" { "Red" }
+                    "Error" { "Red" }
+                    "Warning" { "Yellow" }
+                    default { "White" }
+                }
+            )
+            Write-Host "  Certificate:   $($ErrorEntry.Certificate)" -ForegroundColor Gray
+            if ($ErrorEntry.Thumbprint) {
+                Write-Host "  Thumbprint:    $($ErrorEntry.Thumbprint)" -ForegroundColor Gray
+            }
+            if ($ErrorEntry.Issuer) {
+                Write-Host "  Issuer:        $($ErrorEntry.Issuer)" -ForegroundColor Gray
+            }
+            Write-Host "  Description:   $($ErrorEntry.Description)" -ForegroundColor White
+            Write-Host "  Common Cause:  $($ErrorEntry.CommonCause)" -ForegroundColor Yellow
+            Write-Host "  Resolution:    $($ErrorEntry.Resolution)" -ForegroundColor Green
+            
+            # Display TrustStatus details if available
+            if ($ErrorEntry.TrustStatus) {
+                $Trust = $ErrorEntry.TrustStatus
+                
+                if ($Trust.ErrorFlags.Count -gt 0) {
+                    Write-Host "`n  Trust Chain Validation Errors:" -ForegroundColor Red
+                    foreach ($Flag in $Trust.ErrorFlags) {
+                        $FlagColor = switch ($Flag.Severity) {
+                            'Critical' { 'Red' }
+                            'Error' { 'Red' }
+                            'Warning' { 'Yellow' }
+                            default { 'White' }
+                        }
+                        Write-Host "    $(Get-DisplayChar 'Warning') [$($Flag.Severity)] $($Flag.Flag)" -ForegroundColor $FlagColor
+                        Write-Host "       $($Flag.Description)" -ForegroundColor Gray
+                    }
+                }
+                
+                if ($Trust.InfoFlags.Count -gt 0) {
+                    Write-Host "`n  Trust Chain Information:" -ForegroundColor Cyan
+                    foreach ($Flag in $Trust.InfoFlags) {
+                        Write-Host "    $(Get-DisplayChar 'Checkmark') $($Flag.Flag)" -ForegroundColor Gray
+                        Write-Host "       $($Flag.Description)" -ForegroundColor DarkGray
+                    }
+                }
+            }
+        }
+        
+        # Display summary if requested
+        if ($IncludeSummary) {
+            Write-Host "`n=== Error Summary ===" -ForegroundColor Cyan
+            $ErrorSummary.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object {
+                Write-Host "  $($_.Key): $($_.Value) occurrence(s)" -ForegroundColor White
+            }
+        }
+        
+        # Return the error table for further processing
+        return $ErrorTable
     }
+}
 
-    function Export-CapiEvents {
-        <#
+function Export-CapiEvents {
+    <#
     .SYNOPSIS
         Exports CAPI2 events to various formats (CSV, JSON, HTML, XML).
         
@@ -1996,154 +1996,154 @@ function Get-CapiErrorAnalysis {
     .EXAMPLE
         Export-CapiEvents -Events $Events -Path "C:\Reports" -Format JSON -TaskID "12345..."
     #>
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-            [array]$Events,
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [array]$Events,
         
-            [Parameter(Mandatory = $true)]
-            [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
         
-            [Parameter(Mandatory = $false)]
-            [ValidateSet('CSV', 'JSON', 'HTML', 'XML')]
-            [string]$Format,
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('CSV', 'JSON', 'HTML', 'XML')]
+        [string]$Format,
         
-            [Parameter(Mandatory = $false)]
-            [switch]$IncludeErrorAnalysis,
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeErrorAnalysis,
         
-            [Parameter(Mandatory = $false)]
-            [string]$TaskID
-        )
+        [Parameter(Mandatory = $false)]
+        [string]$TaskID
+    )
     
-        begin {
-            # Determine if Path is a directory or file
-            $IsDirectory = $false
-            if (Test-Path -Path $Path -PathType Container) {
-                $IsDirectory = $true
-            }
-            elseif (-not [System.IO.Path]::HasExtension($Path)) {
-                # Path doesn't exist and has no extension, treat as directory
-                $IsDirectory = $true
-            }
-        
-            # Determine format
-            if (-not $Format) {
-                if ($IsDirectory) {
-                    # Default to HTML if directory specified
-                    $Format = 'HTML'
-                }
-                else {
-                    # Determine from file extension
-                    $Extension = [System.IO.Path]::GetExtension($Path).ToLower()
-                    $Format = switch ($Extension) {
-                        '.csv' { 'CSV' }
-                        '.json' { 'JSON' }
-                        '.html' { 'HTML' }
-                        '.xml' { 'XML' }
-                        default { 'CSV' }
-                    }
-                }
-            }
-        
-            # Construct filename if Path is a directory
-            if ($IsDirectory) {
-                # Create directory if it doesn't exist
-                if (-not (Test-Path $Path)) {
-                    New-Item -Path $Path -ItemType Directory -Force | Out-Null
-                }
-            
-                # Build filename: CapiEvents_<ShortTaskID>.<extension>
-                # Use first 8 chars of GUID for brevity in filename (full GUID is 36 chars)
-                $ShortTaskID = if ($TaskID) { $TaskID.Substring(0, 8) } else { (Get-Date -Format 'yyyyMMdd_HHmmss') }
-                $Extension = switch ($Format) {
-                    'CSV' { 'csv' }
-                    'JSON' { 'json' }
-                    'HTML' { 'html' }
-                    'XML' { 'xml' }
-                    default { 'txt' }
-                }
-                $FileName = "CapiEvents_$ShortTaskID.$Extension"
-                $Path = Join-Path $Path $FileName
-            }
-        
-            Write-Host "Exporting $($Events.Count) event(s) to $Format format..." -ForegroundColor Cyan
+    begin {
+        # Determine if Path is a directory or file
+        $IsDirectory = $false
+        if (Test-Path -Path $Path -PathType Container) {
+            $IsDirectory = $true
         }
-    
-        process {
-            try {
-                # Prepare data for export
-                $ExportData = $Events | Select-Object TimeCreated, ID, RecordType, 
-                @{N = 'EventName'; E = {
-                        if ($_.DetailedMessage -match '<(\w+)\s') { $matches[1] } else { 'Unknown' }
-                    }
-                },
-                @{N = 'Certificate'; E = {
-                        if ($_.DetailedMessage -match 'subjectName="([^"]+)"') { $matches[1] } else { $null }
-                    }
-                },
-                @{N = 'Details'; E = { $_.DetailedMessage } }
+        elseif (-not [System.IO.Path]::HasExtension($Path)) {
+            # Path doesn't exist and has no extension, treat as directory
+            $IsDirectory = $true
+        }
+        
+        # Determine format
+        if (-not $Format) {
+            if ($IsDirectory) {
+                # Default to HTML if directory specified
+                $Format = 'HTML'
+            }
+            else {
+                # Determine from file extension
+                $Extension = [System.IO.Path]::GetExtension($Path).ToLower()
+                $Format = switch ($Extension) {
+                    '.csv' { 'CSV' }
+                    '.json' { 'JSON' }
+                    '.html' { 'HTML' }
+                    '.xml' { 'XML' }
+                    default { 'CSV' }
+                }
+            }
+        }
+        
+        # Construct filename if Path is a directory
+        if ($IsDirectory) {
+            # Create directory if it doesn't exist
+            if (-not (Test-Path $Path)) {
+                New-Item -Path $Path -ItemType Directory -Force | Out-Null
+            }
             
-                switch ($Format) {
-                    'CSV' {
-                        $ExportData | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8
+            # Build filename: CapiEvents_<ShortTaskID>.<extension>
+            # Use first 8 chars of GUID for brevity in filename (full GUID is 36 chars)
+            $ShortTaskID = if ($TaskID) { $TaskID.Substring(0, 8) } else { (Get-Date -Format 'yyyyMMdd_HHmmss') }
+            $Extension = switch ($Format) {
+                'CSV' { 'csv' }
+                'JSON' { 'json' }
+                'HTML' { 'html' }
+                'XML' { 'xml' }
+                default { 'txt' }
+            }
+            $FileName = "CapiEvents_$ShortTaskID.$Extension"
+            $Path = Join-Path $Path $FileName
+        }
+        
+        Write-Host "Exporting $($Events.Count) event(s) to $Format format..." -ForegroundColor Cyan
+    }
+    
+    process {
+        try {
+            # Prepare data for export
+            $ExportData = $Events | Select-Object TimeCreated, ID, RecordType, 
+            @{N = 'EventName'; E = {
+                    if ($_.DetailedMessage -match '<(\w+)\s') { $matches[1] } else { 'Unknown' }
+                }
+            },
+            @{N = 'Certificate'; E = {
+                    if ($_.DetailedMessage -match 'subjectName="([^"]+)"') { $matches[1] } else { $null }
+                }
+            },
+            @{N = 'Details'; E = { $_.DetailedMessage } }
+            
+            switch ($Format) {
+                'CSV' {
+                    $ExportData | Export-Csv -Path $Path -NoTypeInformation -Encoding UTF8
+                }
+                'JSON' {
+                    $JsonData = @{
+                        TaskID     = $TaskID
+                        ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                        EventCount = $Events.Count
+                        Events     = $ExportData
                     }
-                    'JSON' {
-                        $JsonData = @{
-                            TaskID     = $TaskID
-                            ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                            EventCount = $Events.Count
-                            Events     = $ExportData
-                        }
                     
-                        if ($IncludeErrorAnalysis) {
-                            $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
+                    if ($IncludeErrorAnalysis) {
+                        $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
                         
-                            # Filter out non-informative errors (same logic as HTML)
-                            $FilteredErrors = $ErrorAnalysis | Where-Object {
-                                -not ($_.Certificate -eq "(not available)" -and 
-                                    $_.Thumbprint -eq "(not available)" -and
-                                    (-not $_.TrustStatus -or 
-                                    ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
-                            }
-                        
-                            $JsonData['ErrorAnalysis'] = $FilteredErrors
-                            $JsonData['ErrorCount'] = $FilteredErrors.Count
+                        # Filter out non-informative errors (same logic as HTML)
+                        $FilteredErrors = $ErrorAnalysis | Where-Object {
+                            -not ($_.Certificate -eq "(not available)" -and 
+                                $_.Thumbprint -eq "(not available)" -and
+                                (-not $_.TrustStatus -or 
+                                ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
                         }
-                    
-                        $JsonData | ConvertTo-Json -Depth 10 | Out-File -FilePath $Path -Encoding UTF8
+                        
+                        $JsonData['ErrorAnalysis'] = $FilteredErrors
+                        $JsonData['ErrorCount'] = $FilteredErrors.Count
                     }
-                    'XML' {
-                        $XmlData = @{
-                            TaskID     = $TaskID
-                            ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                            Events     = $ExportData
-                        }
                     
-                        if ($IncludeErrorAnalysis) {
-                            $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
-                        
-                            # Filter out non-informative errors (same logic as HTML/JSON)
-                            $FilteredErrors = $ErrorAnalysis | Where-Object {
-                                -not ($_.Certificate -eq "(not available)" -and 
-                                    $_.Thumbprint -eq "(not available)" -and
-                                    (-not $_.TrustStatus -or 
-                                    ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
-                            }
-                        
-                            $XmlData['ErrorAnalysis'] = $FilteredErrors
-                            $XmlData['ErrorCount'] = $FilteredErrors.Count
-                        }
-                    
-                        $XmlData | Export-Clixml -Path $Path
+                    $JsonData | ConvertTo-Json -Depth 10 | Out-File -FilePath $Path -Encoding UTF8
+                }
+                'XML' {
+                    $XmlData = @{
+                        TaskID     = $TaskID
+                        ExportDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                        Events     = $ExportData
                     }
-                    'HTML' {
-                        # Extract X509 certificate information from Event 90
-                        $CertInfo = Get-X509CertificateInfo -Events $Events
                     
-                        # Build certificate info HTML section
-                        $CertInfoHtml = ""
-                        if ($CertInfo) {
-                            $CertInfoHtml = @"
+                    if ($IncludeErrorAnalysis) {
+                        $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
+                        
+                        # Filter out non-informative errors (same logic as HTML/JSON)
+                        $FilteredErrors = $ErrorAnalysis | Where-Object {
+                            -not ($_.Certificate -eq "(not available)" -and 
+                                $_.Thumbprint -eq "(not available)" -and
+                                (-not $_.TrustStatus -or 
+                                ($_.TrustStatus.ErrorFlags.Count -eq 0 -and $_.TrustStatus.InfoFlags.Count -eq 0)))
+                        }
+                        
+                        $XmlData['ErrorAnalysis'] = $FilteredErrors
+                        $XmlData['ErrorCount'] = $FilteredErrors.Count
+                    }
+                    
+                    $XmlData | Export-Clixml -Path $Path
+                }
+                'HTML' {
+                    # Extract X509 certificate information from Event 90
+                    $CertInfo = Get-X509CertificateInfo -Events $Events
+                    
+                    # Build certificate info HTML section
+                    $CertInfoHtml = ""
+                    if ($CertInfo) {
+                        $CertInfoHtml = @"
     <div class="info" style="background: #f0f9ff; border-left: 4px solid #0078d4;">
         <h3 style="margin-top: 0; color: #0078d4;">📜 Certificate Details (Event 90 - X509 Objects)</h3>
         <table style="box-shadow: none; margin-top: 10px;">
@@ -2163,9 +2163,9 @@ $(if ($CertInfo.Organization) { "            <tr><td style='font-weight: bold;'>
 })        </table>
     </div>
 "@
-                        }
+                    }
                     
-                        $HtmlReport = @"
+                    $HtmlReport = @"
 <!DOCTYPE html>
 <html>
 <head>
@@ -2198,13 +2198,13 @@ $(if ($CertInfo.Organization) { "            <tr><td style='font-weight: bold;'>
 $CertInfoHtml
 "@
                     
-                        if ($IncludeErrorAnalysis) {
-                            $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
-                            if ($ErrorAnalysis) {
-                                $HtmlReport += "<h2>❌ Error Analysis</h2>"
+                    if ($IncludeErrorAnalysis) {
+                        $ErrorAnalysis = Get-CapiErrorAnalysis -Events $Events
+                        if ($ErrorAnalysis) {
+                            $HtmlReport += "<h2>❌ Error Analysis</h2>"
                             
-                                # Build custom HTML table with TrustStatus details
-                                $HtmlReport += @"
+                            # Build custom HTML table with TrustStatus details
+                            $HtmlReport += @"
 <table>
     <thead>
         <tr>
@@ -2219,74 +2219,74 @@ $CertInfoHtml
     </thead>
     <tbody>
 "@
-                                foreach ($ErrorEntry in $ErrorAnalysis) {
-                                    # Skip errors without useful information
-                                    # Check if certificate is missing or placeholder
-                                    $HasNoCert = (-not $ErrorEntry.Certificate) -or 
-                                    ($ErrorEntry.Certificate -eq "(not available)") -or
-                                    ($ErrorEntry.Certificate -eq "")
+                            foreach ($ErrorEntry in $ErrorAnalysis) {
+                                # Skip errors without useful information
+                                # Check if certificate is missing or placeholder
+                                $HasNoCert = (-not $ErrorEntry.Certificate) -or 
+                                ($ErrorEntry.Certificate -eq "(not available)") -or
+                                ($ErrorEntry.Certificate -eq "")
                                             
-                                    # Check if thumbprint is missing or placeholder  
-                                    $HasNoThumb = (-not $ErrorEntry.Thumbprint) -or
-                                    ($ErrorEntry.Thumbprint -eq "(not available)") -or
-                                    ($ErrorEntry.Thumbprint -eq "")
+                                # Check if thumbprint is missing or placeholder  
+                                $HasNoThumb = (-not $ErrorEntry.Thumbprint) -or
+                                ($ErrorEntry.Thumbprint -eq "(not available)") -or
+                                ($ErrorEntry.Thumbprint -eq "")
                                              
-                                    # Check if TrustStatus has useful data
-                                    $HasNoTrust = (-not $ErrorEntry.TrustStatus) -or
-                                    (($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0) -and 
-                                    ($ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))
+                                # Check if TrustStatus has useful data
+                                $HasNoTrust = (-not $ErrorEntry.TrustStatus) -or
+                                (($ErrorEntry.TrustStatus.ErrorFlags.Count -eq 0) -and 
+                                ($ErrorEntry.TrustStatus.InfoFlags.Count -eq 0))
                                 
-                                    # Skip if ALL three are empty/useless
-                                    if ($HasNoCert -and $HasNoThumb -and $HasNoTrust) {
-                                        Write-Verbose "Skipping non-informative error: $($ErrorEntry.ErrorName)"
-                                        continue
-                                    }
+                                # Skip if ALL three are empty/useless
+                                if ($HasNoCert -and $HasNoThumb -and $HasNoTrust) {
+                                    Write-Verbose "Skipping non-informative error: $($ErrorEntry.ErrorName)"
+                                    continue
+                                }
                                 
-                                    $SeverityClass = switch ($ErrorEntry.Severity) {
-                                        'Critical' { 'error' }
-                                        'Error' { 'error' }
-                                        'Warning' { 'warning' }
-                                        default { '' }
-                                    }
+                                $SeverityClass = switch ($ErrorEntry.Severity) {
+                                    'Critical' { 'error' }
+                                    'Error' { 'error' }
+                                    'Warning' { 'warning' }
+                                    default { '' }
+                                }
                                 
-                                    # Build TrustStatus HTML
-                                    $TrustHtml = ""
-                                    if ($ErrorEntry.TrustStatus) {
-                                        if ($ErrorEntry.TrustStatus.ErrorFlags.Count -gt 0) {
-                                            $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #d13438;'>Trust Errors:</strong><ul style='margin: 5px 0; padding-left: 20px;'>"
-                                            foreach ($Flag in $ErrorEntry.TrustStatus.ErrorFlags) {
-                                                $TrustHtml += "<li><strong>$($Flag.Flag)</strong><br><span style='color: #666; font-size: 0.9em;'>$($Flag.Description)</span></li>"
-                                            }
-                                            $TrustHtml += "</ul></div>"
+                                # Build TrustStatus HTML
+                                $TrustHtml = ""
+                                if ($ErrorEntry.TrustStatus) {
+                                    if ($ErrorEntry.TrustStatus.ErrorFlags.Count -gt 0) {
+                                        $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #d13438;'>Trust Errors:</strong><ul style='margin: 5px 0; padding-left: 20px;'>"
+                                        foreach ($Flag in $ErrorEntry.TrustStatus.ErrorFlags) {
+                                            $TrustHtml += "<li><strong>$($Flag.Flag)</strong><br><span style='color: #666; font-size: 0.9em;'>$($Flag.Description)</span></li>"
                                         }
-                                        if ($ErrorEntry.TrustStatus.InfoFlags.Count -gt 0) {
-                                            $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #0078d4;'>Trust Info:</strong><ul style='margin: 5px 0; padding-left: 20px; font-size: 0.9em;'>"
-                                            foreach ($Flag in $ErrorEntry.TrustStatus.InfoFlags) {
-                                                $TrustHtml += "<li style='color: #666;'>$($Flag.Flag)</li>"
-                                            }
-                                            $TrustHtml += "</ul></div>"
+                                        $TrustHtml += "</ul></div>"
+                                    }
+                                    if ($ErrorEntry.TrustStatus.InfoFlags.Count -gt 0) {
+                                        $TrustHtml += "<div style='margin-top: 5px;'><strong style='color: #0078d4;'>Trust Info:</strong><ul style='margin: 5px 0; padding-left: 20px; font-size: 0.9em;'>"
+                                        foreach ($Flag in $ErrorEntry.TrustStatus.InfoFlags) {
+                                            $TrustHtml += "<li style='color: #666;'>$($Flag.Flag)</li>"
                                         }
+                                        $TrustHtml += "</ul></div>"
                                     }
-                                    if (-not $TrustHtml) {
-                                        $TrustHtml = "<span style='color: #999;'>No chain details</span>"
-                                    }
+                                }
+                                if (-not $TrustHtml) {
+                                    $TrustHtml = "<span style='color: #999;'>No chain details</span>"
+                                }
                                 
-                                    # Format Certificate and Thumbprint for display
-                                    $CertDisplay = if ($ErrorEntry.Certificate -and $ErrorEntry.Certificate -ne "(not available)") { 
-                                        $ErrorEntry.Certificate 
-                                    }
-                                    else { 
-                                        "<span style='color: #999; font-style: italic;'>Not available</span>" 
-                                    }
+                                # Format Certificate and Thumbprint for display
+                                $CertDisplay = if ($ErrorEntry.Certificate -and $ErrorEntry.Certificate -ne "(not available)") { 
+                                    $ErrorEntry.Certificate 
+                                }
+                                else { 
+                                    "<span style='color: #999; font-style: italic;'>Not available</span>" 
+                                }
                                 
-                                    $ThumbprintDisplay = if ($ErrorEntry.Thumbprint -and $ErrorEntry.Thumbprint -ne "(not available)") { 
-                                        $ErrorEntry.Thumbprint 
-                                    }
-                                    else { 
-                                        "<span style='color: #999; font-style: italic;'>N/A</span>" 
-                                    }
+                                $ThumbprintDisplay = if ($ErrorEntry.Thumbprint -and $ErrorEntry.Thumbprint -ne "(not available)") { 
+                                    $ErrorEntry.Thumbprint 
+                                }
+                                else { 
+                                    "<span style='color: #999; font-style: italic;'>N/A</span>" 
+                                }
                                 
-                                    $HtmlReport += @"
+                                $HtmlReport += @"
         <tr>
             <td class='timestamp'>$($ErrorEntry.TimeCreated)</td>
             <td class='$SeverityClass'>$($ErrorEntry.Severity)</td>
@@ -2297,14 +2297,14 @@ $CertInfoHtml
             <td>$TrustHtml</td>
         </tr>
 "@
-                                }
-                                $HtmlReport += @"
+                            }
+                            $HtmlReport += @"
     </tbody>
 </table>
 "@
                             
-                                # Add resolution guidance section
-                                $HtmlReport += @"
+                            # Add resolution guidance section
+                            $HtmlReport += @"
 <h2>🔧 Resolution Guidance</h2>
 <div class='info'>
     <p><strong>When errors are found in CAPI2 correlation chains:</strong></p>
@@ -2323,27 +2323,27 @@ Compare-CapiEvents -ReferenceEvents <dollarsign>Before -DifferenceEvents <dollar
 Get-CAPI2EventLogStatus</pre>
 </div>
 "@
-                            }
-                            else {
-                                $HtmlReport += @"
+                        }
+                        else {
+                            $HtmlReport += @"
 <h2>✅ Validation Status</h2>
 <div class='info' style='background: #e7ffe7; border-left-color: #107c10;'>
     <p style='color: #107c10; font-weight: bold;'>✓ All certificate validation operations completed successfully!</p>
     <p>No errors were detected in the CAPI2 correlation chain. The certificate chain is trusted and all validation checks passed.</p>
 </div>
 "@
-                            }
                         }
+                    }
                     
-                        # Add CAPI2 Correlation Chain Events table
-                        $HtmlReport += "<h2>📋 CAPI2 Correlation Chain Events</h2>"
-                        $HtmlReport += "<div class='info'>"
-                        $HtmlReport += "<p><strong>Total events in correlation chain:</strong> $($Events.Count)</p>"
-                        $HtmlReport += "<p>This section shows all CAPI2 events sorted by AuxInfo sequence number, displaying the exact order of the certificate validation process.</p>"
-                        $HtmlReport += "</div>"
+                    # Add CAPI2 Correlation Chain Events table
+                    $HtmlReport += "<h2>📋 CAPI2 Correlation Chain Events</h2>"
+                    $HtmlReport += "<div class='info'>"
+                    $HtmlReport += "<p><strong>Total events in correlation chain:</strong> $($Events.Count)</p>"
+                    $HtmlReport += "<p>This section shows all CAPI2 events sorted by AuxInfo sequence number, displaying the exact order of the certificate validation process.</p>"
+                    $HtmlReport += "</div>"
                     
-                        $ChainSummary = Get-EventChainSummary -Events $Events
-                        $HtmlReport += @"
+                    $ChainSummary = Get-EventChainSummary -Events $Events
+                    $HtmlReport += @"
 <table>
     <thead>
         <tr>
@@ -2356,17 +2356,17 @@ Get-CAPI2EventLogStatus</pre>
     </thead>
     <tbody>
 "@
-                        foreach ($ChainEvent in $ChainSummary) {
-                            $LevelClass = switch ($ChainEvent.Level) {
-                                'Error' { 'error' }
-                                'Warning' { 'warning' }
-                                'Information' { '' }
-                                default { '' }
-                            }
+                    foreach ($ChainEvent in $ChainSummary) {
+                        $LevelClass = switch ($ChainEvent.Level) {
+                            'Error' { 'error' }
+                            'Warning' { 'warning' }
+                            'Information' { '' }
+                            default { '' }
+                        }
                         
-                            $SeqDisplay = if ($ChainEvent.Sequence) { $ChainEvent.Sequence } else { "-" }
+                        $SeqDisplay = if ($ChainEvent.Sequence) { $ChainEvent.Sequence } else { "-" }
                         
-                            $HtmlReport += @"
+                        $HtmlReport += @"
         <tr>
             <td style='text-align: center; font-weight: bold; color: #666;'>$SeqDisplay</td>
             <td class='timestamp'>$($ChainEvent.TimeCreated)</td>
@@ -2375,32 +2375,32 @@ Get-CAPI2EventLogStatus</pre>
             <td>$($ChainEvent.TaskCategory)</td>
         </tr>
 "@
-                        }
-                        $HtmlReport += @"
+                    }
+                    $HtmlReport += @"
     </tbody>
 </table>
 "@
                     
-                        $HtmlReport += "<h2>Event Details</h2>"
-                        $HtmlReport += $ExportData | ConvertTo-Html -Fragment -Property TimeCreated, ID, RecordType, EventName, Certificate
-                        $HtmlReport += "</body></html>"
+                    $HtmlReport += "<h2>Event Details</h2>"
+                    $HtmlReport += $ExportData | ConvertTo-Html -Fragment -Property TimeCreated, ID, RecordType, EventName, Certificate
+                    $HtmlReport += "</body></html>"
                     
-                        $HtmlReport | Out-File -FilePath $Path -Encoding UTF8
-                    }
+                    $HtmlReport | Out-File -FilePath $Path -Encoding UTF8
                 }
-            
-                Write-Host "$(Get-DisplayChar 'Checkmark') Export completed successfully: $Path" -ForegroundColor Green
-                Write-Host "  Format: $Format | Size: $([math]::Round((Get-Item $Path).Length / 1KB, 2)) KB" -ForegroundColor Gray
-            
             }
-            catch {
-                Write-Error "Failed to export events: $($_.Exception.Message)"
-            }
+            
+            Write-Host "$(Get-DisplayChar 'Checkmark') Export completed successfully: $Path" -ForegroundColor Green
+            Write-Host "  Format: $Format | Size: $([math]::Round((Get-Item $Path).Length / 1KB, 2)) KB" -ForegroundColor Gray
+            
+        }
+        catch {
+            Write-Error "Failed to export events: $($_.Exception.Message)"
         }
     }
+}
 
-    function Compare-CapiEvents {
-        <#
+function Compare-CapiEvents {
+    <#
     .SYNOPSIS
         Compares two CAPI2 event correlation chains to identify changes or resolved errors.
         
@@ -2433,114 +2433,114 @@ Get-CAPI2EventLogStatus</pre>
         $Results2 = Find-CapiEventsByName -Name "contoso.com"
         Compare-CapiEvents -ReferenceEvents $Results1[0].Events -DifferenceEvents $Results2[0].Events
     #>
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory = $true)]
-            [array]$ReferenceEvents,
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [array]$ReferenceEvents,
         
-            [Parameter(Mandatory = $true)]
-            [array]$DifferenceEvents,
+        [Parameter(Mandatory = $true)]
+        [array]$DifferenceEvents,
         
-            [Parameter(Mandatory = $false)]
-            [string]$ReferenceLabel = "Before",
+        [Parameter(Mandatory = $false)]
+        [string]$ReferenceLabel = "Before",
         
-            [Parameter(Mandatory = $false)]
-            [string]$DifferenceLabel = "After"
-        )
+        [Parameter(Mandatory = $false)]
+        [string]$DifferenceLabel = "After"
+    )
     
-        Write-Host "`n=== CAPI2 Event Comparison ===" -ForegroundColor Cyan
-        Write-Host "$ReferenceLabel Events: $($ReferenceEvents.Count) - $DifferenceLabel Events: $($DifferenceEvents.Count)`n" -ForegroundColor White
+    Write-Host "`n=== CAPI2 Event Comparison ===" -ForegroundColor Cyan
+    Write-Host "$ReferenceLabel Events: $($ReferenceEvents.Count) - $DifferenceLabel Events: $($DifferenceEvents.Count)`n" -ForegroundColor White
     
-        # Get error analysis for both sets
-        Write-Host "Analyzing $ReferenceLabel events..." -ForegroundColor Gray
-        $ReferenceErrors = Get-CapiErrorAnalysis -Events $ReferenceEvents
+    # Get error analysis for both sets
+    Write-Host "Analyzing $ReferenceLabel events..." -ForegroundColor Gray
+    $ReferenceErrors = Get-CapiErrorAnalysis -Events $ReferenceEvents
     
-        Write-Host "Analyzing $DifferenceLabel events..." -ForegroundColor Gray
-        $DifferenceErrors = Get-CapiErrorAnalysis -Events $DifferenceEvents
+    Write-Host "Analyzing $DifferenceLabel events..." -ForegroundColor Gray
+    $DifferenceErrors = Get-CapiErrorAnalysis -Events $DifferenceEvents
     
-        # Compare error counts
-        $RefErrorCount = if ($ReferenceErrors) { $ReferenceErrors.Count } else { 0 }
-        $DiffErrorCount = if ($DifferenceErrors) { $DifferenceErrors.Count } else { 0 }
+    # Compare error counts
+    $RefErrorCount = if ($ReferenceErrors) { $ReferenceErrors.Count } else { 0 }
+    $DiffErrorCount = if ($DifferenceErrors) { $DifferenceErrors.Count } else { 0 }
     
-        Write-Host "`n=== Comparison Results ===" -ForegroundColor Cyan
+    Write-Host "`n=== Comparison Results ===" -ForegroundColor Cyan
     
-        if ($RefErrorCount -eq 0 -and $DiffErrorCount -eq 0) {
-            Write-Host "$(Get-DisplayChar 'Checkmark') No errors in either event set - All validations successful!" -ForegroundColor Green
-            return
-        }
+    if ($RefErrorCount -eq 0 -and $DiffErrorCount -eq 0) {
+        Write-Host "$(Get-DisplayChar 'Checkmark') No errors in either event set - All validations successful!" -ForegroundColor Green
+        return
+    }
     
-        if ($RefErrorCount -gt 0 -and $DiffErrorCount -eq 0) {
-            Write-Host "$(Get-DisplayChar 'Checkmark') ERRORS RESOLVED!" -ForegroundColor Green
-            Write-Host "  $ReferenceLabel had $RefErrorCount error(s), $DifferenceLabel has 0 errors." -ForegroundColor Green
-            Write-Host "`nResolved Errors:" -ForegroundColor Green
-            $ReferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
-            return
-        }
+    if ($RefErrorCount -gt 0 -and $DiffErrorCount -eq 0) {
+        Write-Host "$(Get-DisplayChar 'Checkmark') ERRORS RESOLVED!" -ForegroundColor Green
+        Write-Host "  $ReferenceLabel had $RefErrorCount error(s), $DifferenceLabel has 0 errors." -ForegroundColor Green
+        Write-Host "`nResolved Errors:" -ForegroundColor Green
+        $ReferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
+        return
+    }
     
-        if ($RefErrorCount -eq 0 -and $DiffErrorCount -gt 0) {
-            Write-Host "$(Get-DisplayChar 'Warning') NEW ERRORS DETECTED!" -ForegroundColor Red
-            Write-Host "  $ReferenceLabel had 0 errors, $DifferenceLabel has $DiffErrorCount error(s)." -ForegroundColor Red
-            Write-Host "`nNew Errors:" -ForegroundColor Red
-            $DifferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
-            return
-        }
+    if ($RefErrorCount -eq 0 -and $DiffErrorCount -gt 0) {
+        Write-Host "$(Get-DisplayChar 'Warning') NEW ERRORS DETECTED!" -ForegroundColor Red
+        Write-Host "  $ReferenceLabel had 0 errors, $DifferenceLabel has $DiffErrorCount error(s)." -ForegroundColor Red
+        Write-Host "`nNew Errors:" -ForegroundColor Red
+        $DifferenceErrors | Format-Table ErrorName, Certificate, Description -AutoSize
+        return
+    }
     
-        # Both have errors - find differences
-        Write-Host "Error Count: $ReferenceLabel = $RefErrorCount, $DifferenceLabel = $DiffErrorCount" -ForegroundColor Yellow
+    # Both have errors - find differences
+    Write-Host "Error Count: $ReferenceLabel = $RefErrorCount, $DifferenceLabel = $DiffErrorCount" -ForegroundColor Yellow
     
-        $RefErrorTypes = $ReferenceErrors | Select-Object -ExpandProperty ErrorName -Unique
-        $DiffErrorTypes = $DifferenceErrors | Select-Object -ExpandProperty ErrorName -Unique
+    $RefErrorTypes = $ReferenceErrors | Select-Object -ExpandProperty ErrorName -Unique
+    $DiffErrorTypes = $DifferenceErrors | Select-Object -ExpandProperty ErrorName -Unique
     
-        $ResolvedErrors = $RefErrorTypes | Where-Object { $_ -notin $DiffErrorTypes }
-        $NewErrors = $DiffErrorTypes | Where-Object { $_ -notin $RefErrorTypes }
-        $PersistentErrors = $RefErrorTypes | Where-Object { $_ -in $DiffErrorTypes }
+    $ResolvedErrors = $RefErrorTypes | Where-Object { $_ -notin $DiffErrorTypes }
+    $NewErrors = $DiffErrorTypes | Where-Object { $_ -notin $RefErrorTypes }
+    $PersistentErrors = $RefErrorTypes | Where-Object { $_ -in $DiffErrorTypes }
     
-        if ($ResolvedErrors) {
-            Write-Host "`n$(Get-DisplayChar 'Checkmark') Resolved Errors:" -ForegroundColor Green
-            $ResolvedErrors | ForEach-Object {
-                $ErrorDetail = $ReferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
-                Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Green
-            }
-        }
-    
-        if ($NewErrors) {
-            Write-Host "`n$(Get-DisplayChar 'Warning') New Errors:" -ForegroundColor Red
-            $NewErrors | ForEach-Object {
-                $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
-                Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Red
-            }
-        }
-    
-        if ($PersistentErrors) {
-            Write-Host "`n$(Get-DisplayChar 'Warning') Persistent Errors (still present):" -ForegroundColor Yellow
-            $PersistentErrors | ForEach-Object {
-                $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
-                Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Yellow
-            }
-        }
-    
-        # Summary
-        Write-Host "`n=== Summary ===" -ForegroundColor Cyan
-        Write-Host "Resolved: $($ResolvedErrors.Count) | New: $($NewErrors.Count) | Persistent: $($PersistentErrors.Count)" -ForegroundColor White
-    
-        if ($DiffErrorCount -lt $RefErrorCount) {
-            Write-Host "`n$(Get-DisplayChar 'Checkmark') Overall improvement: Error count reduced from $RefErrorCount to $DiffErrorCount" -ForegroundColor Green
-        }
-        elseif ($DiffErrorCount -gt $RefErrorCount) {
-            Write-Host "`n$(Get-DisplayChar 'Warning') Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
-        }
-        else {
-            $ErrorText = "$RefErrorCount errors"
-            Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count - $ErrorText" -ForegroundColor Yellow
+    if ($ResolvedErrors) {
+        Write-Host "`n$(Get-DisplayChar 'Checkmark') Resolved Errors:" -ForegroundColor Green
+        $ResolvedErrors | ForEach-Object {
+            $ErrorDetail = $ReferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
+            Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Green
         }
     }
+    
+    if ($NewErrors) {
+        Write-Host "`n$(Get-DisplayChar 'Warning') New Errors:" -ForegroundColor Red
+        $NewErrors | ForEach-Object {
+            $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
+            Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Red
+        }
+    }
+    
+    if ($PersistentErrors) {
+        Write-Host "`n$(Get-DisplayChar 'Warning') Persistent Errors (still present):" -ForegroundColor Yellow
+        $PersistentErrors | ForEach-Object {
+            $ErrorDetail = $DifferenceErrors | Where-Object { $_.ErrorName -eq $_ } | Select-Object -First 1
+            Write-Host "  - $_ : $($ErrorDetail.Description)" -ForegroundColor Yellow
+        }
+    }
+    
+    # Summary
+    Write-Host "`n=== Summary ===" -ForegroundColor Cyan
+    Write-Host "Resolved: $($ResolvedErrors.Count) | New: $($NewErrors.Count) | Persistent: $($PersistentErrors.Count)" -ForegroundColor White
+    
+    if ($DiffErrorCount -lt $RefErrorCount) {
+        Write-Host "`n$(Get-DisplayChar 'Checkmark') Overall improvement: Error count reduced from $RefErrorCount to $DiffErrorCount" -ForegroundColor Green
+    }
+    elseif ($DiffErrorCount -gt $RefErrorCount) {
+        Write-Host "`n$(Get-DisplayChar 'Warning') Situation worsened: Error count increased from $RefErrorCount to $DiffErrorCount" -ForegroundColor Red
+    }
+    else {
+        $ErrorText = "$RefErrorCount errors"
+        Write-Host "`n$(Get-DisplayChar 'RightArrow') No change in error count - $ErrorText" -ForegroundColor Yellow
+    }
+}
 
-    #endregion
+#endregion
 
-    #region Simplified Workflow Functions
+#region Simplified Workflow Functions
 
-    function Get-CapiCertificateReport {
-        <#
+function Get-CapiCertificateReport {
+    <#
     .SYNOPSIS
         Simplified one-command solution to find, analyze, and export certificate errors.
         
@@ -2623,225 +2623,225 @@ Get-CAPI2EventLogStatus</pre>
           - C:\Reports\site.com_4E61DCEE.html
           - etc.
     #>
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory = $true, Position = 0)]
-            [string]$Name,
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$Name,
         
-            [Parameter(Mandatory = $false)]
-            [ValidateNotNullOrEmpty()]
-            [string]$ExportPath,
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ExportPath,
         
-            [Parameter(Mandatory = $false)]
-            [ValidateSet('HTML', 'JSON', 'CSV', 'XML')]
-            [string]$Format = 'HTML',
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('HTML', 'JSON', 'CSV', 'XML')]
+        [string]$Format = 'HTML',
         
-            [Parameter(Mandatory = $false)]
-            [ValidateRange(1, 8760)]
-            [int]$Hours = 24,
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 8760)]
+        [int]$Hours = 24,
         
-            [Parameter(Mandatory = $false)]
-            [int]$MaxEvents = 10,
+        [Parameter(Mandatory = $false)]
+        [int]$MaxEvents = 10,
         
-            [Parameter(Mandatory = $false)]
-            [switch]$ShowDetails,
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowDetails,
         
-            [Parameter(Mandatory = $false)]
-            [switch]$OpenReport
-        )
+        [Parameter(Mandatory = $false)]
+        [switch]$OpenReport
+    )
     
-        # Validate that OpenReport requires ExportPath
-        if ($OpenReport -and -not $ExportPath) {
-            Write-Error "-OpenReport switch requires -ExportPath to be specified"
-            return
-        }
+    # Validate that OpenReport requires ExportPath
+    if ($OpenReport -and -not $ExportPath) {
+        Write-Error "-OpenReport switch requires -ExportPath to be specified"
+        return
+    }
     
-        # Validate and create export directory if specified
-        if ($ExportPath) {
-            if (-not (Test-Path $ExportPath)) {
-                try {
-                    New-Item -ItemType Directory -Path $ExportPath -Force | Out-Null
-                    Write-Host "$(Get-DisplayChar 'Lightbulb') Created export directory: $ExportPath" -ForegroundColor Gray
-                }
-                catch {
-                    Write-Error "Failed to create export directory: $ExportPath. Error: $_"
-                    return
-                }
+    # Validate and create export directory if specified
+    if ($ExportPath) {
+        if (-not (Test-Path $ExportPath)) {
+            try {
+                New-Item -ItemType Directory -Path $ExportPath -Force | Out-Null
+                Write-Host "$(Get-DisplayChar 'Lightbulb') Created export directory: $ExportPath" -ForegroundColor Gray
             }
-            elseif (-not (Test-Path $ExportPath -PathType Container)) {
-                Write-Error "ExportPath must be a directory, not a file: $ExportPath"
+            catch {
+                Write-Error "Failed to create export directory: $ExportPath. Error: $_"
                 return
             }
         }
-    
-        Write-Host "`n$(Get-DisplayChar 'RightArrow') Searching for certificate events: $Name" -ForegroundColor Cyan
-        Write-Host "   Time range: Last $Hours hours`n" -ForegroundColor Gray
-    
-        # Search for events
-        $Results = Find-CapiEventsByName -Name $Name -Hours $Hours -MaxEvents $MaxEvents
-    
-        if (-not $Results -or $Results.Count -eq 0) {
-            Write-Host "$(Get-DisplayChar 'Warning') No certificate events found for: $Name" -ForegroundColor Yellow
-            Write-Host "`nTroubleshooting tips:" -ForegroundColor Cyan
-            Write-Host "  1. Verify CAPI2 logging is enabled: " -NoNewline -ForegroundColor Gray
-            Write-Host "Get-CAPI2EventLogStatus" -ForegroundColor White
-            Write-Host "  2. Reproduce the certificate issue (browse to site, run application)" -ForegroundColor Gray
-            Write-Host "  3. Try a broader search term or increase -Hours parameter" -ForegroundColor Gray
-            Write-Host "  4. Use Start-CAPI2Troubleshooting to prepare for fresh testing`n" -ForegroundColor Gray
+        elseif (-not (Test-Path $ExportPath -PathType Container)) {
+            Write-Error "ExportPath must be a directory, not a file: $ExportPath"
             return
         }
+    }
     
-        # Display summary
-        Write-Host "$(Get-DisplayChar 'CheckmarkBold') Found $($Results.Count) correlation chain(s) matching '$Name'" -ForegroundColor Green
-        Write-Host ""
+    Write-Host "`n$(Get-DisplayChar 'RightArrow') Searching for certificate events: $Name" -ForegroundColor Cyan
+    Write-Host "   Time range: Last $Hours hours`n" -ForegroundColor Gray
     
-        # Track exported files
-        $ExportedFiles = @()
+    # Search for events
+    $Results = Find-CapiEventsByName -Name $Name -Hours $Hours -MaxEvents $MaxEvents
     
-        # Process each chain
-        $ChainNumber = 0
-        foreach ($Chain in $Results) {
-            $ChainNumber++
+    if (-not $Results -or $Results.Count -eq 0) {
+        Write-Host "$(Get-DisplayChar 'Warning') No certificate events found for: $Name" -ForegroundColor Yellow
+        Write-Host "`nTroubleshooting tips:" -ForegroundColor Cyan
+        Write-Host "  1. Verify CAPI2 logging is enabled: " -NoNewline -ForegroundColor Gray
+        Write-Host "Get-CAPI2EventLogStatus" -ForegroundColor White
+        Write-Host "  2. Reproduce the certificate issue (browse to site, run application)" -ForegroundColor Gray
+        Write-Host "  3. Try a broader search term or increase -Hours parameter" -ForegroundColor Gray
+        Write-Host "  4. Use Start-CAPI2Troubleshooting to prepare for fresh testing`n" -ForegroundColor Gray
+        return
+    }
+    
+    # Display summary
+    Write-Host "$(Get-DisplayChar 'CheckmarkBold') Found $($Results.Count) correlation chain(s) matching '$Name'" -ForegroundColor Green
+    Write-Host ""
+    
+    # Track exported files
+    $ExportedFiles = @()
+    
+    # Process each chain
+    $ChainNumber = 0
+    foreach ($Chain in $Results) {
+        $ChainNumber++
         
-            Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-            Write-Host "  Chain #$ChainNumber of $($Results.Count)" -ForegroundColor Cyan
-            Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-            Write-Host "  TaskID: " -NoNewline -ForegroundColor Gray
-            Write-Host $Chain.TaskID -ForegroundColor White
-            Write-Host "  Timestamp: " -NoNewline -ForegroundColor Gray
-            Write-Host $Chain.Timestamp -ForegroundColor White
-            Write-Host "  Events: " -NoNewline -ForegroundColor Gray
-            Write-Host $Chain.Events.Count -ForegroundColor White
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  Chain #$ChainNumber of $($Results.Count)" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  TaskID: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.TaskID -ForegroundColor White
+        Write-Host "  Timestamp: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.Timestamp -ForegroundColor White
+        Write-Host "  Events: " -NoNewline -ForegroundColor Gray
+        Write-Host $Chain.Events.Count -ForegroundColor White
         
-            # Count errors
-            $ErrorEvents = $Chain.Events | Where-Object { $_.Id -eq 30 }
-            $ErrorCount = if ($ErrorEvents) { $ErrorEvents.Count } else { 0 }
+        # Count errors
+        $ErrorEvents = $Chain.Events | Where-Object { $_.Id -eq 30 }
+        $ErrorCount = if ($ErrorEvents) { $ErrorEvents.Count } else { 0 }
         
-            Write-Host "  Errors: " -NoNewline -ForegroundColor Gray
-            if ($ErrorCount -eq 0) {
-                Write-Host $ErrorCount -ForegroundColor Green
-            }
-            else {
-                Write-Host $ErrorCount -ForegroundColor Red
-            }
-        
-            # Extract certificate name for filename
-            $CertificateName = "Unknown"
-            try {
-                foreach ($Event in $Chain.Events) {
-                    [xml]$EventXml = $Event.DetailedMessage
-                
-                    # Try subjectName attribute first
-                    $CertNode = $EventXml.SelectSingleNode("//*[@subjectName]")
-                    if ($CertNode -and $CertNode.subjectName) {
-                        $CertificateName = $CertNode.subjectName
-                        break
-                    }
-                
-                    # Try CN element
-                    $CNNode = $EventXml.SelectSingleNode("//CN")
-                    if ($CNNode -and $CNNode.InnerText) {
-                        $CertificateName = $CNNode.InnerText
-                        break
-                    }
-                
-                    # Try ProcessName
-                    $ProcessNode = $EventXml.SelectSingleNode("//*[@ProcessName]")
-                    if ($ProcessNode -and $ProcessNode.ProcessName) {
-                        $CertificateName = $ProcessNode.ProcessName -replace '\.exe$', ''
-                        break
-                    }
-                }
-            }
-            catch {
-                # If extraction fails, use search name
-                $CertificateName = $Name -replace '[*?]', ''
-            }
-        
-            # Sanitize certificate name for filename
-            $SafeCertName = $CertificateName -replace '[\\/:*?"<>|]', '_'
-        
-            Write-Host "  Certificate: " -NoNewline -ForegroundColor Gray
-            Write-Host $CertificateName -ForegroundColor White
-            Write-Host ""
-        
-            # Always show error analysis for the first chain, or all if ShowDetails
-            if ($ChainNumber -eq 1 -or $ShowDetails) {
-                Get-CapiErrorAnalysis -Events $Chain.Events -IncludeSummary
-            }
-        
-            # Export each chain if path provided
-            if ($ExportPath) {
-                # Use first 8 chars of TaskID for filename brevity (not for search)
-                $ShortTaskID = $Chain.TaskID.ToString().Substring(0, 8)
-            
-                # Determine file extension
-                $Extension = switch ($Format) {
-                    'HTML' { '.html' }
-                    'JSON' { '.json' }
-                    'CSV' { '.csv' }
-                    'XML' { '.xml' }
-                    default { '.html' }
-                }
-            
-                # Build filename: CertName_TaskID.ext
-                $FileName = "${SafeCertName}_${ShortTaskID}${Extension}"
-                $FullExportPath = Join-Path $ExportPath $FileName
-            
-                Write-Host "$(Get-DisplayChar 'RightArrow') Exporting to: " -NoNewline -ForegroundColor Cyan
-                Write-Host $FileName -ForegroundColor White
-            
-                # Export
-                Export-CapiEvents -Events $Chain.Events -Path $FullExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
-            
-                $ExportedFiles += $FullExportPath
-            }
-        
-            Write-Host ""
+        Write-Host "  Errors: " -NoNewline -ForegroundColor Gray
+        if ($ErrorCount -eq 0) {
+            Write-Host $ErrorCount -ForegroundColor Green
         }
-    
-        # Final summary
-        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-        Write-Host "  $(Get-DisplayChar 'CheckmarkBold') Certificate Report Complete" -ForegroundColor Green
-        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
-    
-        if ($ExportedFiles.Count -gt 0) {
-            Write-Host "  Exported $($ExportedFiles.Count) report(s) to: " -NoNewline -ForegroundColor Gray
-            Write-Host $ExportPath -ForegroundColor White
+        else {
+            Write-Host $ErrorCount -ForegroundColor Red
+        }
         
-            if ($ExportedFiles.Count -le 5) {
-                # Show all files if 5 or fewer
-                foreach ($File in $ExportedFiles) {
-                    Write-Host "    - " -NoNewline -ForegroundColor Gray
-                    Write-Host ([System.IO.Path]::GetFileName($File)) -ForegroundColor Cyan
+        # Extract certificate name for filename
+        $CertificateName = "Unknown"
+        try {
+            foreach ($Event in $Chain.Events) {
+                [xml]$EventXml = $Event.DetailedMessage
+                
+                # Try subjectName attribute first
+                $CertNode = $EventXml.SelectSingleNode("//*[@subjectName]")
+                if ($CertNode -and $CertNode.subjectName) {
+                    $CertificateName = $CertNode.subjectName
+                    break
+                }
+                
+                # Try CN element
+                $CNNode = $EventXml.SelectSingleNode("//CN")
+                if ($CNNode -and $CNNode.InnerText) {
+                    $CertificateName = $CNNode.InnerText
+                    break
+                }
+                
+                # Try ProcessName
+                $ProcessNode = $EventXml.SelectSingleNode("//*[@ProcessName]")
+                if ($ProcessNode -and $ProcessNode.ProcessName) {
+                    $CertificateName = $ProcessNode.ProcessName -replace '\.exe$', ''
+                    break
                 }
             }
-            else {
-                # Show first 3 and last 1 if more than 5
-                for ($i = 0; $i -lt 3; $i++) {
-                    Write-Host "    - " -NoNewline -ForegroundColor Gray
-                    Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[$i])) -ForegroundColor Cyan
-                }
-                Write-Host "    ... and $($ExportedFiles.Count - 4) more files ..." -ForegroundColor Gray
+        }
+        catch {
+            # If extraction fails, use search name
+            $CertificateName = $Name -replace '[*?]', ''
+        }
+        
+        # Sanitize certificate name for filename
+        $SafeCertName = $CertificateName -replace '[\\/:*?"<>|]', '_'
+        
+        Write-Host "  Certificate: " -NoNewline -ForegroundColor Gray
+        Write-Host $CertificateName -ForegroundColor White
+        Write-Host ""
+        
+        # Always show error analysis for the first chain, or all if ShowDetails
+        if ($ChainNumber -eq 1 -or $ShowDetails) {
+            Get-CapiErrorAnalysis -Events $Chain.Events -IncludeSummary
+        }
+        
+        # Export each chain if path provided
+        if ($ExportPath) {
+            # Use first 8 chars of TaskID for filename brevity (not for search)
+            $ShortTaskID = $Chain.TaskID.ToString().Substring(0, 8)
+            
+            # Determine file extension
+            $Extension = switch ($Format) {
+                'HTML' { '.html' }
+                'JSON' { '.json' }
+                'CSV' { '.csv' }
+                'XML' { '.xml' }
+                default { '.html' }
+            }
+            
+            # Build filename: CertName_TaskID.ext
+            $FileName = "${SafeCertName}_${ShortTaskID}${Extension}"
+            $FullExportPath = Join-Path $ExportPath $FileName
+            
+            Write-Host "$(Get-DisplayChar 'RightArrow') Exporting to: " -NoNewline -ForegroundColor Cyan
+            Write-Host $FileName -ForegroundColor White
+            
+            # Export
+            Export-CapiEvents -Events $Chain.Events -Path $FullExportPath -Format $Format -IncludeErrorAnalysis -TaskID $Chain.TaskID
+            
+            $ExportedFiles += $FullExportPath
+        }
+        
+        Write-Host ""
+    }
+    
+    # Final summary
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "  $(Get-DisplayChar 'CheckmarkBold') Certificate Report Complete" -ForegroundColor Green
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    
+    if ($ExportedFiles.Count -gt 0) {
+        Write-Host "  Exported $($ExportedFiles.Count) report(s) to: " -NoNewline -ForegroundColor Gray
+        Write-Host $ExportPath -ForegroundColor White
+        
+        if ($ExportedFiles.Count -le 5) {
+            # Show all files if 5 or fewer
+            foreach ($File in $ExportedFiles) {
                 Write-Host "    - " -NoNewline -ForegroundColor Gray
-                Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
-            }
-        
-            # Open Explorer to show the reports directory if requested
-            if ($OpenReport) {
-                Write-Host ""
-                Write-Host "$(Get-DisplayChar 'RightArrow') Opening Explorer to show reports..." -ForegroundColor Cyan
-                Start-Process "explorer.exe" -ArgumentList $ExportPath
+                Write-Host ([System.IO.Path]::GetFileName($File)) -ForegroundColor Cyan
             }
         }
+        else {
+            # Show first 3 and last 1 if more than 5
+            for ($i = 0; $i -lt 3; $i++) {
+                Write-Host "    - " -NoNewline -ForegroundColor Gray
+                Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[$i])) -ForegroundColor Cyan
+            }
+            Write-Host "    ... and $($ExportedFiles.Count - 4) more files ..." -ForegroundColor Gray
+            Write-Host "    - " -NoNewline -ForegroundColor Gray
+            Write-Host ([System.IO.Path]::GetFileName($ExportedFiles[-1])) -ForegroundColor Cyan
+        }
+        
+        # Open Explorer to show the reports directory if requested
+        if ($OpenReport) {
+            Write-Host ""
+            Write-Host "$(Get-DisplayChar 'RightArrow') Opening Explorer to show reports..." -ForegroundColor Cyan
+            Start-Process "explorer.exe" -ArgumentList $ExportPath
+        }
+    }
     
-        Write-Host ""
-    }#endregion
+    Write-Host ""
+}#endregion
 
-    #region Workflow Helper Functions
+#region Workflow Helper Functions
 
-    function Start-CAPI2Troubleshooting {
-        <#
+function Start-CAPI2Troubleshooting {
+    <#
     .SYNOPSIS
         Prepares the CAPI2 event log for a fresh troubleshooting session.
         
@@ -2868,57 +2868,57 @@ Get-CAPI2EventLogStatus</pre>
         Start-CAPI2Troubleshooting -ClearLog -BackupPath "C:\Logs\CAPI2_Before_$(Get-Date -Format 'yyyyMMdd_HHmmss').evtx"
         Enables logging, backs up existing events, and clears log
     #>
-        [CmdletBinding(SupportsShouldProcess)]
-        param(
-            [Parameter(Mandatory = $false)]
-            [switch]$ClearLog,
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$ClearLog,
         
-            [Parameter(Mandatory = $false)]
-            [string]$BackupPath
-        )
+        [Parameter(Mandatory = $false)]
+        [string]$BackupPath
+    )
     
-        Write-BoxHeader -Text "Starting CAPI2 Troubleshooting Session" -Icon "Wrench" -Color Cyan
+    Write-BoxHeader -Text "Starting CAPI2 Troubleshooting Session" -Icon "Wrench" -Color Cyan
     
-        # Check admin rights
-        $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    # Check admin rights
+    $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     
-        if (-not $IsAdmin) {
-            Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
-            return
-        }
+    if (-not $IsAdmin) {
+        Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
+        return
+    }
     
-        # Step 1: Enable logging
-        Write-Host "[Step 1/3] Enabling CAPI2 Event Log..." -ForegroundColor Yellow
-        Enable-CAPI2EventLog
+    # Step 1: Enable logging
+    Write-Host "[Step 1/3] Enabling CAPI2 Event Log..." -ForegroundColor Yellow
+    Enable-CAPI2EventLog
     
-        # Step 2: Clear log if requested
-        if ($ClearLog) {
-            Write-Host "`n[Step 2/3] Clearing CAPI2 Event Log..." -ForegroundColor Yellow
-            if ($BackupPath) {
-                Clear-CAPI2EventLog -Backup $BackupPath
-            }
-            else {
-                Clear-CAPI2EventLog
-            }
+    # Step 2: Clear log if requested
+    if ($ClearLog) {
+        Write-Host "`n[Step 2/3] Clearing CAPI2 Event Log..." -ForegroundColor Yellow
+        if ($BackupPath) {
+            Clear-CAPI2EventLog -Backup $BackupPath
         }
         else {
-            Write-Host "`n[Step 2/3] Keeping existing events (use -ClearLog to clear)" -ForegroundColor Gray
+            Clear-CAPI2EventLog
         }
-    
-        # Step 3: Show status
-        Write-Host "`n[Step 3/3] Current CAPI2 Log Status:" -ForegroundColor Yellow
-        Get-CAPI2EventLogStatus
-    
-        Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Ready!" -ForegroundColor Green
-        Write-Host "   Next steps:" -ForegroundColor White
-        Write-Host "   1. Reproduce your certificate issue (browse to site, run application, etc.)" -ForegroundColor Gray
-        Write-Host "   2. Use Find-CapiEventsByName to locate events: Find-CapiEventsByName -Name 'yoursite.com'" -ForegroundColor Gray
-        Write-Host "   3. Analyze errors: Get-CapiErrorAnalysis -Events `$Results[0].Events" -ForegroundColor Gray
-        Write-Host "   4. When done, run: Stop-CAPI2Troubleshooting`n" -ForegroundColor Gray
     }
+    else {
+        Write-Host "`n[Step 2/3] Keeping existing events (use -ClearLog to clear)" -ForegroundColor Gray
+    }
+    
+    # Step 3: Show status
+    Write-Host "`n[Step 3/3] Current CAPI2 Log Status:" -ForegroundColor Yellow
+    Get-CAPI2EventLogStatus
+    
+    Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Ready!" -ForegroundColor Green
+    Write-Host "   Next steps:" -ForegroundColor White
+    Write-Host "   1. Reproduce your certificate issue (browse to site, run application, etc.)" -ForegroundColor Gray
+    Write-Host "   2. Use Find-CapiEventsByName to locate events: Find-CapiEventsByName -Name 'yoursite.com'" -ForegroundColor Gray
+    Write-Host "   3. Analyze errors: Get-CapiErrorAnalysis -Events `$Results[0].Events" -ForegroundColor Gray
+    Write-Host "   4. When done, run: Stop-CAPI2Troubleshooting`n" -ForegroundColor Gray
+}
 
-    function Stop-CAPI2Troubleshooting {
-        <#
+function Stop-CAPI2Troubleshooting {
+    <#
     .SYNOPSIS
         Completes the CAPI2 troubleshooting session and optionally disables logging.
         
@@ -2945,86 +2945,86 @@ Get-CAPI2EventLogStatus</pre>
         Stop-CAPI2Troubleshooting -DisableLog -ExportPath "C:\Reports\CAPI2_Session_$(Get-Date -Format 'yyyyMMdd_HHmmss').evtx"
         Exports events, shows summary, and disables logging
     #>
-        [CmdletBinding(SupportsShouldProcess)]
-        param(
-            [Parameter(Mandatory = $false)]
-            [switch]$DisableLog,
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$DisableLog,
         
-            [Parameter(Mandatory = $false)]
-            [string]$ExportPath
-        )
+        [Parameter(Mandatory = $false)]
+        [string]$ExportPath
+    )
     
-        Write-BoxHeader -Text "Completing CAPI2 Troubleshooting Session" -Icon "Flag" -Color Cyan
+    Write-BoxHeader -Text "Completing CAPI2 Troubleshooting Session" -Icon "Flag" -Color Cyan
     
-        # Check admin rights
-        $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    # Check admin rights
+    $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     
-        if (-not $IsAdmin) {
-            Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
-            return
-        }
-    
-        # Show final status
-        Write-Host "[Step 1/3] Final CAPI2 Log Status:" -ForegroundColor Yellow
-        Get-CAPI2EventLogStatus
-    
-        # Export if requested
-        if ($ExportPath) {
-            Write-Host "`n[Step 2/3] Exporting CAPI2 Event Log..." -ForegroundColor Yellow
-            try {
-                wevtutil.exe epl Microsoft-Windows-CAPI2/Operational "$ExportPath"
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "$(Get-DisplayChar 'Checkmark') Events exported to: $ExportPath" -ForegroundColor Green
-                }
-                else {
-                    Write-Warning "Failed to export events. Exit code: $LASTEXITCODE"
-                }
-            }
-            catch {
-                Write-Warning "Error exporting events: $($_.Exception.Message)"
-            }
-        }
-        else {
-            Write-Host "`n[Step 2/3] No export requested (use -ExportPath to save events)" -ForegroundColor Gray
-        }
-    
-        # Disable if requested
-        Write-Host "`n[Step 3/3] CAPI2 Logging..." -ForegroundColor Yellow
-        if ($DisableLog) {
-            Disable-CAPI2EventLog
-        }
-        else {
-            Write-Host "  Logging remains ENABLED (use -DisableLog to disable)" -ForegroundColor Gray
-        }
-    
-        Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Complete!" -ForegroundColor Green
-        Write-Host "   Recommended next steps:" -ForegroundColor White
-        Write-Host "   - Review exported events or analysis reports" -ForegroundColor Gray
-        Write-Host "   - Document findings and solutions" -ForegroundColor Gray
-        Write-Host "   - If issue persists, compare before/after using Compare-CapiEvents`n" -ForegroundColor Gray
+    if (-not $IsAdmin) {
+        Write-Error "This cmdlet requires administrative privileges. Please run PowerShell as Administrator."
+        return
     }
+    
+    # Show final status
+    Write-Host "[Step 1/3] Final CAPI2 Log Status:" -ForegroundColor Yellow
+    Get-CAPI2EventLogStatus
+    
+    # Export if requested
+    if ($ExportPath) {
+        Write-Host "`n[Step 2/3] Exporting CAPI2 Event Log..." -ForegroundColor Yellow
+        try {
+            wevtutil.exe epl Microsoft-Windows-CAPI2/Operational "$ExportPath"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "$(Get-DisplayChar 'Checkmark') Events exported to: $ExportPath" -ForegroundColor Green
+            }
+            else {
+                Write-Warning "Failed to export events. Exit code: $LASTEXITCODE"
+            }
+        }
+        catch {
+            Write-Warning "Error exporting events: $($_.Exception.Message)"
+        }
+    }
+    else {
+        Write-Host "`n[Step 2/3] No export requested (use -ExportPath to save events)" -ForegroundColor Gray
+    }
+    
+    # Disable if requested
+    Write-Host "`n[Step 3/3] CAPI2 Logging..." -ForegroundColor Yellow
+    if ($DisableLog) {
+        Disable-CAPI2EventLog
+    }
+    else {
+        Write-Host "  Logging remains ENABLED (use -DisableLog to disable)" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n$(Get-DisplayChar 'CheckmarkBold') CAPI2 Troubleshooting Session Complete!" -ForegroundColor Green
+    Write-Host "   Recommended next steps:" -ForegroundColor White
+    Write-Host "   - Review exported events or analysis reports" -ForegroundColor Gray
+    Write-Host "   - Document findings and solutions" -ForegroundColor Gray
+    Write-Host "   - If issue persists, compare before/after using Compare-CapiEvents`n" -ForegroundColor Gray
+}
 
-    #endregion
+#endregion
 
-    #region Aliases
+#region Aliases
 
-    # Create friendly aliases for common commands
-    New-Alias -Name 'Find-CertEvents' -Value 'Find-CapiEventsByName' -Description 'Alias for Find-CapiEventsByName'
-    New-Alias -Name 'Get-CertChain' -Value 'Get-CapiTaskIDEvents' -Description 'Alias for Get-CapiTaskIDEvents'
-    New-Alias -Name 'Enable-CapiLog' -Value 'Enable-CAPI2EventLog' -Description 'Alias for Enable-CAPI2EventLog'
-    New-Alias -Name 'Disable-CapiLog' -Value 'Disable-CAPI2EventLog' -Description 'Alias for Disable-CAPI2EventLog'
-    New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias for Clear-CAPI2EventLog'
+# Create friendly aliases for common commands
+New-Alias -Name 'Find-CertEvents' -Value 'Find-CapiEventsByName' -Description 'Alias for Find-CapiEventsByName'
+New-Alias -Name 'Get-CertChain' -Value 'Get-CapiTaskIDEvents' -Description 'Alias for Get-CapiTaskIDEvents'
+New-Alias -Name 'Enable-CapiLog' -Value 'Enable-CAPI2EventLog' -Description 'Alias for Enable-CAPI2EventLog'
+New-Alias -Name 'Disable-CapiLog' -Value 'Disable-CAPI2EventLog' -Description 'Alias for Disable-CAPI2EventLog'
+New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias for Clear-CAPI2EventLog'
 
-    #endregion
+#endregion
 
-    # Export module members
-    Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
-        Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
-        Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, Get-CAPI2ErrorDetails, `
-        Get-CapiCertificateReport, Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
-        -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
+# Export module members
+Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
+    Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
+    Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, Get-CAPI2ErrorDetails, `
+    Get-CapiCertificateReport, Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
+    -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
 
-    <#
+<#
 .NOTES
     Version:        2.5
     Author:         Jan Tiedemann
