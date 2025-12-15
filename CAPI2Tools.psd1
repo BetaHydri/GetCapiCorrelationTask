@@ -3,7 +3,7 @@
     RootModule           = 'CAPI2Tools.psm1'
     
     # Version number of this module.
-    ModuleVersion        = '2.11.0'
+    ModuleVersion        = '2.12.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -96,31 +96,39 @@ Features:
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
-## Version 2.5.0 (December 2025)
+## Version 2.12.0 (December 2025)
 
 ### New Features
-- Converted to PowerShell module (.psm1/.psd1)
-- Added workflow cmdlets: Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting
-- Comprehensive error analysis with resolution guidance
-- Multi-format export (CSV, JSON, HTML, XML)
-- Before/after comparison for tracking fixes
-- CAPI2 event log management cmdlets
+- X.509 Certificate Information display from Event 90
+- Subject Alternative Names (SANs) - DNS, UPN, Email addresses
+- Smart end-entity certificate selection (excludes CA certificates)
+- Enhanced HTML reports with certificate details section
+- 25+ CAPI2 Event IDs mapped (CRL Retrieval, CTL Operations, Network Retrieval)
+- TaskID format normalization (handles {GUID} and GUID formats)
+- Robust XML namespace handling with GetElementsByTagName
 
 ### Improvements
-- Enhanced parameter sets for better usability
-- Improved error handling and user feedback
-- Color-coded console output
-- Built-in error code dictionary
+- Certificate box display with validity color indicators
+- Complete certificate details (Subject CN, Issuer, Serial, Validity)
+- Fixed string multiplication errors in certificate display code
+- Certificate display now conditional on -ShowEventChain parameter
 
 ### Breaking Changes
-- None - backward compatible with v2.0
+- Removed partial GUID (8-character) search support
+- Only full GUID format accepted for TaskID searches
 
-## Version 2.0.0
-- Added DNS/certificate name search
-- Enhanced UI and documentation
+## Version 2.11.0 (December 2025)
+- Event chain display with -ShowEventChain parameter
+- AuxInfo sequence numbers for chronological ordering
+- Task Categories display (Build Chain, X509 Objects, Verify Chain Policy)
 
-## Version 1.0.0
-- Initial release
+## Version 2.10.1 (December 2025)
+- Event ID 82 support, 13 new error codes
+- Certificate thumbprint extraction and display
+
+## Version 2.5.0 (December 2025)
+- Converted to PowerShell module
+- Comprehensive error analysis and multi-format export
 '@
             # Prerelease string of this module
             # Prerelease = ''
