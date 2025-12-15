@@ -3217,11 +3217,11 @@ function Get-CapiAllErrors {
         
         $ErrorSummary = $ErrorsByType.Values | Sort-Object -Property Count -Descending | ForEach-Object {
             [PSCustomObject]@{
-                ErrorName       = $_.ErrorName
-                ErrorCode       = $_.ErrorCode
-                Occurrences     = $_.Count
+                ErrorName         = $_.ErrorName
+                ErrorCode         = $_.ErrorCode
+                Occurrences       = $_.Count
                 'Affected Chains' = $_.TaskIDs.Count
-                Description     = $_.Description.Substring(0, [Math]::Min(80, $_.Description.Length)) + "..."
+                Description       = $_.Description.Substring(0, [Math]::Min(80, $_.Description.Length)) + "..."
             }
         }
         
@@ -3287,7 +3287,8 @@ function Get-CapiAllErrors {
                 
                 if ($Chain.Events -and $Chain.Events.Count -gt 0) {
                     Get-CapiErrorAnalysis -Events $Chain.Events -ShowEventChain
-                } else {
+                }
+                else {
                     Write-Host "No correlated events found for this chain." -ForegroundColor Yellow
                 }
                 
@@ -3317,7 +3318,8 @@ function Get-CapiAllErrors {
                         $ShortTaskID = $Chain.TaskID.Substring(0, 8)
                         $CertNameShort = if ($Chain.Certificate -ne "(not available)") { 
                             ($Chain.Certificate -replace '[\\/:*?"<>|]', '_').Substring(0, [Math]::Min(30, $Chain.Certificate.Length))
-                        } else { 
+                        }
+                        else { 
                             "Unknown" 
                         }
                         $FileName = "Error_${CertNameShort}_$ShortTaskID.html"
