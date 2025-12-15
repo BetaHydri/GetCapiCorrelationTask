@@ -2018,6 +2018,218 @@ Get-CapiCertificateReport -Name "site.com" -ExportPath "C:\Reports"
 
 If you see "✓ No errors found" instead of error details, the chain completed successfully without certificate validation errors.
 
+---
+
+## 📊 Understanding CAPI2 Event Sequences
+
+When Windows validates a certificate, it generates a sequence of CAPI2 events with specific order (shown by sequence numbers 1, 2, 3, etc.). Understanding these patterns helps diagnose certificate issues quickly.
+
+### Common Event Sequences and Their Meaning
+
+#### ✅ **Successful Certificate Validation (No Errors)**
+
+**Typical Sequence (7-9 events):**
+```
+Seq 1 → Event 11 (Build Chain)         - Started building certificate chain
+Seq 2 → Event 90 (X509 Objects)        - Retrieved certificate objects
+Seq 3 → Event 10 (Verify Trust)        - Verified trust chain
+Seq 4 → Event 30 (Verify Chain Policy) - Checked certificate policies
+Seq 5 → Event 14 (Verify Revocation)   - Started revocation check
+Seq 6 → Event 40 (Network Retrieval)   - Retrieved CRL/OCSP
+Seq 7 → Event 41 (Network Retrieval)   - Revocation info retrieved
+Seq 8 → Event 30 (Verify Chain Policy) - Final policy validation
+Seq 9 → Event 70 (Certificate Details) - Completed successfully
+```
+
+**Characteristics:**
+- All events are **Information** level
+- No error codes in XML Result/Error nodes
+- Network retrieval (40/41) succeeds
+- Chain building completes without issues
+
+---
+
+#### ❌ **Revocation Check Failure (CRYPT_E_REVOCATION_OFFLINE)**
+
+**Typical Sequence (5 events):**
+```
+Seq 1 → Event 10 (Build Chain)         - Started building certificate chain [Information]
+Seq 2 → Event 40 (Network Retrieval)   - Attempted CRL/OCSP retrieval [Information]
+Seq 3 → Event 41 (Network Retrieval)   - Network retrieval FAILED [Error]
+                                          └─ 0x80092013 (CRYPT_E_REVOCATION_OFFLINE)
+Seq 4 → Event 90 (X509 Objects)        - Certificate objects processed [Information]
+Seq 5 → Event 11 (Build Chain)         - Chain building FAILED [Error]
+                                          └─ 0x80092013 (CRYPT_E_REVOCATION_OFFLINE)
+```
+
+**Root Cause:**
+- CRL Distribution Point or OCSP server unreachable
+- Firewall blocking outbound HTTP/HTTPS to revocation URLs
+- Proxy configuration preventing access
+- Network connectivity issue
+
+**Fix:**
+- Check network connectivity to CRL/OCSP URLs
+- Verify firewall allows access to revocation servers
+- Configure proxy settings if needed
+- Check DNS resolution for revocation URLs
+
+---
+
+#### ❌ **Untrusted Root Certificate (CERT_E_UNTRUSTEDROOT)**
+
+**Typical Sequence (6-8 events):**
+```
+Seq 1 → Event 11 (Build Chain)         - Started building certificate chain [Information]
+Seq 2 → Event 90 (X509 Objects)        - Retrieved certificate objects [Information]
+Seq 3 → Event 10 (Build Chain)         - Attempted trust verification [Information]
+Seq 4 → Event 30 (Verify Chain Policy) - Policy validation [Information]
+Seq 5 → Event 30 (Verify Chain Policy) - Policy check FAILED [Error]
+                                          └─ 0x800B0109 (CERT_E_UNTRUSTEDROOT)
+Seq 6 → Event 11 (Build Chain)         - Chain terminated in untrusted root [Error]
+```
+
+**Root Cause:**
+- Root CA certificate not in Trusted Root Certification Authorities store
+- Self-signed certificate used
+- Internal CA certificate not deployed
+- Certificate chain incomplete
+
+**Fix:**
+- Install root CA certificate to Trusted Root store
+- Deploy CA certificates via Group Policy
+- Verify certificate chain is complete
+- For internal CAs, ensure PKI infrastructure is properly configured
+
+---
+
+#### ❌ **Expired Certificate (CERT_E_EXPIRED)**
+
+**Typical Sequence (5-7 events):**
+```
+Seq 1 → Event 11 (Build Chain)         - Started building certificate chain [Information]
+Seq 2 → Event 90 (X509 Objects)        - Certificate objects with validity dates [Information]
+Seq 3 → Event 10 (Build Chain)         - Trust verification [Information]
+Seq 4 → Event 30 (Verify Chain Policy) - Validity period check FAILED [Error]
+                                          └─ 0x800B0101 (CERT_E_EXPIRED)
+Seq 5 → Event 11 (Build Chain)         - Chain validation FAILED [Error]
+```
+
+**Root Cause:**
+- Certificate NotAfter date has passed (expired)
+- Certificate NotBefore date hasn't arrived yet (not yet valid)
+- System clock incorrect
+
+**Fix:**
+- Renew expired certificate immediately
+- Verify system clock is accurate
+- Check certificate validity dates
+- Update certificate on server
+
+---
+
+#### ❌ **Certificate Chain Building Failure (CERT_E_CHAINING)**
+
+**Typical Sequence (4-6 events):**
+```
+Seq 1 → Event 11 (Build Chain)         - Started building certificate chain [Information]
+Seq 2 → Event 90 (X509 Objects)        - Retrieved available certificates [Information]
+Seq 3 → Event 11 (Build Chain)         - Cannot find issuer certificate [Error]
+                                          └─ 0x800B010A (CERT_E_CHAINING)
+Seq 4 → Event 10 (Build Chain)         - Attempted AIA retrieval [Information]
+Seq 5 → Event 11 (Build Chain)         - Chain building FAILED [Error]
+```
+
+**Root Cause:**
+- Missing intermediate CA certificates
+- AIA (Authority Information Access) URLs unreachable
+- Incomplete certificate chain on server
+- Certificate store missing chain members
+
+**Fix:**
+- Install missing intermediate certificates
+- Verify AIA URLs are accessible
+- Ensure server sends complete certificate chain
+- Check certificate store for all chain members
+
+---
+
+#### ⚠️ **Wrong Certificate Usage (CERT_E_WRONG_USAGE)**
+
+**Typical Sequence (6-8 events):**
+```
+Seq 1 → Event 11 (Build Chain)         - Started building certificate chain [Information]
+Seq 2 → Event 90 (X509 Objects)        - Retrieved certificate [Information]
+Seq 3 → Event 10 (Build Chain)         - Chain built successfully [Information]
+Seq 4 → Event 30 (Verify Chain Policy) - Started policy validation [Information]
+Seq 5 → Event 30 (Verify Chain Policy) - Policy validation FAILED [Error]
+                                          └─ 0x800B0111 (CERT_E_WRONG_USAGE)
+Seq 6 → Event 11 (Build Chain)         - Certificate not valid for usage [Error]
+```
+
+**Root Cause:**
+- Certificate missing required Enhanced Key Usage (EKU)
+- Server certificate used for code signing
+- Client certificate used for server authentication
+- Application policy requirements not met
+
+**Fix:**
+- Request new certificate with correct EKU extensions
+- For servers: Ensure Server Authentication (1.3.6.1.5.5.7.3.1)
+- For clients: Ensure Client Authentication (1.3.6.1.5.5.7.3.2)
+- Verify application policy requirements
+
+---
+
+### CAPI2 Event ID Reference
+
+| Event ID | Task Category | Typical Level | Description |
+|----------|--------------|---------------|-------------|
+| **10** | Verify Trust / Build Chain | Information | Trust verification step in chain building |
+| **11** | Build Chain | Info/Error | Certificate chain construction (start or completion) |
+| **14** | Verify Revocation | Information | Revocation check started |
+| **30** | Verify Chain Policy | Info/Error | Certificate policy validation |
+| **40** | Network Retrieval | Information | Started retrieving CRL/OCSP/AIA |
+| **41** | Network Retrieval | Info/Error | Network retrieval completed (success or failure) |
+| **50** | CRL Retrieval | Information | Started CRL download |
+| **51** | CRL Retrieval | Information | CRL retrieval completed |
+| **70** | Certificate Details | Information | Certificate details logged |
+| **80** | Private Key Operations | Information | Private key access/operations |
+| **81** | Private Key Operations | Information | Private key operation completed |
+| **90** | X509 Objects | Information | X.509 certificate objects processed |
+
+### How to Use This Information
+
+**When analyzing errors with `Get-CapiErrorAnalysis -ShowEventChain`:**
+
+1. **Look at the sequence numbers** to understand the validation flow
+2. **Identify where errors occur** in the sequence (which step failed)
+3. **Check event IDs** to understand what operation was being performed
+4. **Note the Level** (Information vs Error) to see where problems started
+5. **Correlate with error codes** to determine root cause
+
+**Example Analysis:**
+```powershell
+# Get error chain with sequence
+Find-CapiEventsByName -Name "problematic-site.com" | Get-CapiErrorAnalysis -ShowEventChain
+
+# Output shows:
+# Seq 1 → Event 11 [Info]  ✓ Chain building started
+# Seq 2 → Event 40 [Info]  ✓ Network retrieval started  
+# Seq 3 → Event 41 [Error] ❌ Network retrieval FAILED (0x80092013)
+#         └─ Diagnosis: Revocation server unreachable
+# Seq 4 → Event 90 [Info]  ✓ Certificate processed
+# Seq 5 → Event 11 [Error] ❌ Chain building failed
+```
+
+**Quick Diagnosis Tips:**
+- **Error in Event 41**: Network/connectivity issue (CRL/OCSP/AIA)
+- **Error in Event 30**: Policy/validation issue (expired, wrong usage, etc.)
+- **Error in Event 11**: Chain building issue (missing CA, untrusted root)
+- **All Information**: Successful validation (check XML for Result codes)
+
+---
+
 ### CAPI2 Logging Not Enabled
 
 If you see no events, CAPI2 logging may be disabled:
