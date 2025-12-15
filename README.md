@@ -634,6 +634,83 @@ Sequence TimeCreated          Level       EventID TaskCategory
 
 ---
 
+### Understanding the Difference: Get-CapiAllErrors vs. Get-CapiErrorAnalysis
+
+These two functions serve **different purposes** in the certificate troubleshooting workflow:
+
+#### `Get-CapiAllErrors` - **Discovery & Bulk Analysis** 🔍
+- **Purpose**: Automatically **discovers ALL errors** in the entire CAPI2 log
+- **Input**: Time range parameters only (Hours, MaxEvents)
+- **Output**: Returns summary objects with correlated event chains for every error found
+- **Use When**: You don't know what certificate errors exist and need comprehensive discovery
+
+**Example:**
+```powershell
+# Find ALL certificate errors in last 24 hours
+Get-CapiAllErrors -Hours 24
+
+# Export ALL error chains to HTML reports automatically
+Get-CapiAllErrors -ExportPath "C:\Reports"
+
+# Group by error type for statistics
+Get-CapiAllErrors -GroupByError
+```
+
+#### `Get-CapiErrorAnalysis` - **Detailed Analysis** 🔬
+- **Purpose**: Analyzes errors in events you **already found**
+- **Input**: Array of CAPI2 events from another command
+- **Output**: Displays detailed error analysis table with descriptions and resolutions
+- **Use When**: You have specific events to analyze (from `Find-CapiEventsByName` or similar)
+
+**Example:**
+```powershell
+# Find events for a specific certificate, then analyze
+Find-CapiEventsByName -Name "expired.badssl.com" | Get-CapiErrorAnalysis -ShowEventChain
+
+# Analyze specific TaskID events
+$Events = Get-CapiTaskIDEvents -TaskID "GUID-HERE"
+Get-CapiErrorAnalysis -Events $Events -IncludeSummary
+```
+
+#### Quick Reference: When to Use Which
+
+| Your Question | Use This Function |
+|--------------|-------------------|
+| **"What certificate errors exist on this system?"** | `Get-CapiAllErrors -Hours 24` |
+| **"Find errors for www.example.com"** | `Find-CapiEventsByName -Name "www.example.com" \| Get-CapiErrorAnalysis` |
+| **"Export reports for ALL errors found"** | `Get-CapiAllErrors -ExportPath "C:\Reports"` |
+| **"Show me detailed analysis of these specific events"** | `Get-CapiErrorAnalysis -Events $EventArray` |
+| **"How many revocation errors occurred?"** | `Get-CapiAllErrors -GroupByError` |
+| **"Why did validation fail for this certificate?"** | `Find-CapiEventsByName -Name "cert.com" \| Get-CapiErrorAnalysis` |
+
+#### Workflow Comparison
+
+**Traditional Workflow (Target-Specific):**
+```powershell
+# 1. Search for specific certificate
+$Results = Find-CapiEventsByName -Name "problematic-site.com"
+
+# 2. Analyze those specific events
+Get-CapiErrorAnalysis -Events $Results[0].Events -ShowEventChain
+
+# 3. Export if needed
+Export-CapiEvents -Events $Results[0].Events -Path "C:\Reports" -Format HTML -TaskID $Results[0].TaskID
+```
+
+**Discovery Workflow (System-Wide):**
+```powershell
+# Single command finds and correlates ALL errors with bulk export
+Get-CapiAllErrors -Hours 24 -ExportPath "C:\Reports"
+
+# Or get summary for review
+$AllErrors = Get-CapiAllErrors -Hours 48
+$AllErrors | Format-Table TimeCreated, Certificate, ErrorCount, Errors
+```
+
+**Key Insight**: Use `Get-CapiAllErrors` when you need to **discover** problems. Use `Get-CapiErrorAnalysis` when you need to **understand** specific problems.
+
+---
+
 ### Export Functions
 
 #### `Export-CapiEvents`
