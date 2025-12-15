@@ -1016,7 +1016,7 @@ foreach ($Site in $Sites) {
         foreach ($Result in $Results) {
             # Export automatically generates filename: CapiEvents_<TaskID>.html
             Export-CapiEvents -Events $Result.Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
-            Write-Host "✓ Exported $Site analysis (TaskID: $($Result.TaskID.Substring(0,8)))" -ForegroundColor Green
+            Write-Host "✓ Exported $Site analysis (TaskID: $($Result.TaskID))" -ForegroundColor Green
         }
     }
 }
@@ -1232,7 +1232,7 @@ Export-CapiEvents -Events $AllErrors[0].Events `
                   -IncludeErrorAnalysis `
                   -TaskID $AllErrors[0].TaskID
 
-Write-Host "Report saved to: C:\Reports\CapiEvents_$($AllErrors[0].TaskID.Substring(0,8)).html" -ForegroundColor Green
+Write-Host "Report saved to: C:\Reports\CapiEvents_$($AllErrors[0].TaskID).html" -ForegroundColor Green
 
 # Step 7: Summary and recommendations
 Write-Host "`n=== Troubleshooting Summary ===" -ForegroundColor Cyan
@@ -1450,7 +1450,7 @@ foreach ($Result in $Results) {
     
     # Export to separate file
     if ($ErrorAnalysis) {
-        $FileName = "microsoft_$($Result.TaskID.Substring(0,8)).html"
+        $FileName = "microsoft_$($Result.TaskID).html"
         Export-CapiEvents -Events $Events -Path "C:\Reports" -Format HTML -IncludeErrorAnalysis -TaskID $Result.TaskID
         Write-Host "Exported: $FileName" -ForegroundColor Green
     }
