@@ -3004,6 +3004,342 @@ function Stop-CAPI2Troubleshooting {
     Write-Host "   - If issue persists, compare before/after using Compare-CapiEvents`n" -ForegroundColor Gray
 }
 
+function Get-CapiAllErrors {
+    <#
+    .SYNOPSIS
+        Finds and correlates all CAPI2 error events in the event log.
+        
+    .DESCRIPTION
+        Scans the CAPI2 event log for all events containing errors (Result/Error nodes with non-zero values),
+        groups them by TaskID for correlation, and provides analysis of each error chain.
+        
+        For each error found, the function automatically retrieves ALL correlated events using the TaskID,
+        giving you the complete certificate validation chain context (Build Chain, X509 Objects, Verify Trust, etc.).
+        
+        This is useful for getting a comprehensive overview of all certificate validation failures.
+        
+    .PARAMETER Hours
+        Number of hours to look back. Default is 24 hours.
+        
+    .PARAMETER MaxEvents
+        Maximum number of events to retrieve from the log. Default is 5000.
+        
+    .PARAMETER GroupByError
+        Groups results by error type instead of TaskID, showing which errors are most common.
+        
+    .PARAMETER ExportPath
+        Optional directory path to export each error chain as a separate HTML report.
+        Each report includes the full correlated event chain with error analysis.
+        
+    .PARAMETER ShowAnalysis
+        Display detailed error analysis for each error chain using Get-CapiErrorAnalysis.
+        Shows certificate details, error descriptions, and resolution guidance.
+        
+    .EXAMPLE
+        Get-CapiAllErrors
+        
+        Finds all CAPI2 errors in the last 24 hours, correlates full event chains, and displays summary.
+        
+    .EXAMPLE
+        Get-CapiAllErrors -Hours 48 -GroupByError
+        
+        Finds all errors from the last 48 hours and groups them by error type.
+        
+    .EXAMPLE
+        Get-CapiAllErrors -Hours 72 -ExportPath "C:\Reports\CAPI2Errors"
+        
+        Finds all errors from the last 72 hours and exports each correlated error chain as HTML.
+        
+    .EXAMPLE
+        $AllErrors = Get-CapiAllErrors -Hours 24
+        $AllErrors | Where-Object { $_.ErrorCount -gt 1 } | Format-Table
+        
+        Gets all errors and filters to show only chains with multiple errors.
+        
+    .EXAMPLE
+        Get-CapiAllErrors -ShowAnalysis
+        
+        Finds all errors and displays detailed analysis for each chain with resolution steps.
+        
+    .EXAMPLE
+        $Errors = Get-CapiAllErrors -Hours 24
+        $Errors[0].Events | Get-CapiErrorAnalysis -ShowEventChain
+        
+        Get all errors, then analyze the first error chain with full event details.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [int]$Hours = 24,
+        
+        [Parameter(Mandatory = $false)]
+        [int]$MaxEvents = 5000,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$GroupByError,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$ExportPath,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ShowAnalysis
+    )
+    
+    Write-Host "`n=== Scanning for All CAPI2 Errors ===" -ForegroundColor Cyan
+    Write-Host "Time range: Last $Hours hours" -ForegroundColor Gray
+    Write-Host "Max events to scan: $MaxEvents`n" -ForegroundColor Gray
+    
+    if ($ShowAnalysis) {
+        Write-Host "Detailed analysis will be shown for each error chain`n" -ForegroundColor Gray
+    }
+    
+    # Calculate start time
+    $StartTime = (Get-Date).AddHours(-$Hours)
+    
+    # Retrieve all CAPI2 events in the time range
+    $FilterHash = @{
+        LogName   = 'Microsoft-Windows-CAPI2/Operational'
+        StartTime = $StartTime
+    }
+    
+    try {
+        $AllEvents = Get-WinEvent -FilterHashtable $FilterHash -MaxEvents $MaxEvents -ErrorAction Stop
+    }
+    catch {
+        Write-Host "$(Get-DisplayChar 'Cross') No CAPI2 events found or error accessing log: $($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
+    
+    if (-not $AllEvents -or $AllEvents.Count -eq 0) {
+        Write-Host "$(Get-DisplayChar 'Warning') No CAPI2 events found in the specified time range." -ForegroundColor Yellow
+        return
+    }
+    
+    Write-Host "$(Get-DisplayChar 'RightArrow') Retrieved $($AllEvents.Count) events. Analyzing for errors..." -ForegroundColor Cyan
+    
+    # Convert events
+    $ConvertedEvents = $AllEvents | Convert-EventLogRecord
+    
+    # Find all events with errors
+    $EventsWithErrors = @()
+    $ErrorsByTaskID = @{}
+    $ErrorsByType = @{}
+    
+    foreach ($Event in $ConvertedEvents) {
+        try {
+            [xml]$EventXml = $Event.UserData
+            
+            # Check for Result/Error elements with non-zero values
+            $ResultNodes = $EventXml.SelectNodes("//*[local-name()='Result' and @value] | //*[local-name()='Error' and @value]")
+            
+            $HasError = $false
+            $ErrorCodes = @()
+            
+            foreach ($Node in $ResultNodes) {
+                $ErrorValue = $Node.value
+                if ($ErrorValue -ne "0" -and $ErrorValue -ne "0x0") {
+                    $HasError = $true
+                    $ErrorCodes += $ErrorValue
+                }
+            }
+            
+            if ($HasError) {
+                # Extract TaskID from CorrelationAuxInfo
+                $TaskID = $null
+                $AuxInfoNode = $EventXml.GetElementsByTagName("CorrelationAuxInfo") | Select-Object -First 1
+                if ($AuxInfoNode -and $AuxInfoNode.TaskId) {
+                    $TaskID = $AuxInfoNode.TaskId.Trim('{}')
+                }
+                
+                # Extract certificate name
+                $CertName = $null
+                $SubjectNode = $EventXml.GetElementsByTagName("subjectName") | Select-Object -First 1
+                if ($SubjectNode) {
+                    $CertName = $SubjectNode.'#text'
+                }
+                
+                $EventWithError = [PSCustomObject]@{
+                    TimeCreated = $Event.TimeCreated
+                    EventID     = $Event.Id
+                    TaskID      = $TaskID
+                    ErrorCodes  = $ErrorCodes
+                    Certificate = $CertName
+                    Event       = $Event
+                }
+                
+                $EventsWithErrors += $EventWithError
+                
+                # Group by TaskID
+                if ($TaskID) {
+                    if (-not $ErrorsByTaskID.ContainsKey($TaskID)) {
+                        $ErrorsByTaskID[$TaskID] = @()
+                    }
+                    $ErrorsByTaskID[$TaskID] += $EventWithError
+                }
+                
+                # Group by error type
+                foreach ($ErrorCode in $ErrorCodes) {
+                    $ErrorDetails = Get-CAPI2ErrorDetails -ErrorCode $ErrorCode
+                    $ErrorName = $ErrorDetails.HexCode
+                    
+                    if (-not $ErrorsByType.ContainsKey($ErrorName)) {
+                        $ErrorsByType[$ErrorName] = @{
+                            ErrorName   = $ErrorName
+                            ErrorCode   = $ErrorCode
+                            Description = $ErrorDetails.Description
+                            Count       = 0
+                            TaskIDs     = @()
+                            Events      = @()
+                        }
+                    }
+                    $ErrorsByType[$ErrorName].Count++
+                    if ($TaskID -and $TaskID -notin $ErrorsByType[$ErrorName].TaskIDs) {
+                        $ErrorsByType[$ErrorName].TaskIDs += $TaskID
+                    }
+                    $ErrorsByType[$ErrorName].Events += $EventWithError
+                }
+            }
+        }
+        catch {
+            # Skip events that can't be parsed
+            continue
+        }
+    }
+    
+    Write-Host "$(Get-DisplayChar 'Checkmark') Found $($EventsWithErrors.Count) events with errors" -ForegroundColor Green
+    Write-Host "   Unique TaskIDs: $($ErrorsByTaskID.Keys.Count)" -ForegroundColor Gray
+    Write-Host "   Unique Error Types: $($ErrorsByType.Keys.Count)`n" -ForegroundColor Gray
+    
+    if ($GroupByError) {
+        # Display results grouped by error type
+        Write-Host "=== Errors Grouped by Type ===" -ForegroundColor Cyan
+        Write-Host ""
+        
+        $ErrorSummary = $ErrorsByType.Values | Sort-Object -Property Count -Descending | ForEach-Object {
+            [PSCustomObject]@{
+                ErrorName       = $_.ErrorName
+                ErrorCode       = $_.ErrorCode
+                Occurrences     = $_.Count
+                'Affected Chains' = $_.TaskIDs.Count
+                Description     = $_.Description.Substring(0, [Math]::Min(80, $_.Description.Length)) + "..."
+            }
+        }
+        
+        $ErrorSummary | Format-Table -AutoSize -Wrap
+        
+        return $ErrorSummary
+    }
+    else {
+        # Display results grouped by TaskID
+        Write-Host "=== Error Chains (Grouped by TaskID) ===" -ForegroundColor Cyan
+        Write-Host ""
+        
+        $ChainSummary = @()
+        
+        foreach ($TaskID in $ErrorsByTaskID.Keys) {
+            $ChainEvents = $ErrorsByTaskID[$TaskID]
+            $FirstEvent = $ChainEvents | Sort-Object TimeCreated | Select-Object -First 1
+            
+            # Get unique error types for this chain
+            $UniqueErrors = $ChainEvents.ErrorCodes | Select-Object -Unique
+            $ErrorNames = $UniqueErrors | ForEach-Object {
+                (Get-CAPI2ErrorDetails -ErrorCode $_).HexCode
+            } | Select-Object -Unique
+            
+            # Get certificate name
+            $CertName = ($ChainEvents | Where-Object { $_.Certificate } | Select-Object -First 1).Certificate
+            if (-not $CertName) {
+                $CertName = "(not available)"
+            }
+            
+            # Get full correlated event chain for this TaskID
+            Write-Verbose "Retrieving full correlation chain for TaskID: $TaskID"
+            $FullChain = Get-CapiTaskIDEvents -TaskID $TaskID
+            
+            $ChainSummary += [PSCustomObject]@{
+                TimeCreated      = $FirstEvent.TimeCreated
+                TaskID           = $TaskID
+                Certificate      = $CertName
+                ErrorCount       = $ChainEvents.Count
+                UniqueErrors     = $ErrorNames.Count
+                Errors           = ($ErrorNames -join ', ')
+                Events           = $FullChain  # Full correlated event chain
+                CorrelatedEvents = if ($FullChain) { $FullChain.Count } else { 0 }
+            }
+        }
+        
+        $ChainSummary = $ChainSummary | Sort-Object -Property TimeCreated -Descending
+        
+        # Display summary table
+        $ChainSummary | Select-Object TimeCreated, TaskID, Certificate, ErrorCount, CorrelatedEvents, UniqueErrors, Errors | Format-Table -AutoSize -Wrap
+        
+        # Show detailed analysis if requested
+        if ($ShowAnalysis -and $ChainSummary.Count -gt 0) {
+            Write-Host "`n=== Detailed Error Analysis ===" -ForegroundColor Cyan
+            Write-Host "Analyzing $($ChainSummary.Count) error chain(s)...`n" -ForegroundColor Gray
+            
+            $ChainNumber = 1
+            foreach ($Chain in $ChainSummary) {
+                Write-Host "`n--- Error Chain $ChainNumber of $($ChainSummary.Count) ---" -ForegroundColor Yellow
+                Write-Host "TaskID: $($Chain.TaskID)" -ForegroundColor Gray
+                Write-Host "Certificate: $($Chain.Certificate)" -ForegroundColor Gray
+                Write-Host "Time: $($Chain.TimeCreated)" -ForegroundColor Gray
+                
+                if ($Chain.Events -and $Chain.Events.Count -gt 0) {
+                    Get-CapiErrorAnalysis -Events $Chain.Events -ShowEventChain
+                } else {
+                    Write-Host "No correlated events found for this chain." -ForegroundColor Yellow
+                }
+                
+                $ChainNumber++
+                
+                # Pause between chains if there are many
+                if ($ChainNumber -le $ChainSummary.Count -and $ChainSummary.Count -gt 3) {
+                    Write-Host "`nPress any key to continue to next chain, or Ctrl+C to stop..." -ForegroundColor DarkGray
+                    $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                }
+            }
+        }
+        
+        # Export if path specified
+        if ($ExportPath) {
+            if (-not (Test-Path $ExportPath)) {
+                New-Item -Path $ExportPath -ItemType Directory -Force | Out-Null
+            }
+            
+            Write-Host "`n$(Get-DisplayChar 'RightArrow') Exporting error chains to: $ExportPath" -ForegroundColor Cyan
+            
+            $ExportCount = 0
+            foreach ($Chain in $ChainSummary) {
+                try {
+                    # Use the already correlated full chain
+                    if ($Chain.Events -and $Chain.Events.Count -gt 0) {
+                        $ShortTaskID = $Chain.TaskID.Substring(0, 8)
+                        $CertNameShort = if ($Chain.Certificate -ne "(not available)") { 
+                            ($Chain.Certificate -replace '[\\/:*?"<>|]', '_').Substring(0, [Math]::Min(30, $Chain.Certificate.Length))
+                        } else { 
+                            "Unknown" 
+                        }
+                        $FileName = "Error_${CertNameShort}_$ShortTaskID.html"
+                        $FilePath = Join-Path $ExportPath $FileName
+                        
+                        Export-CapiEvents -Events $Chain.Events -Path $FilePath -Format HTML -IncludeErrorAnalysis -TaskID $Chain.TaskID
+                        $ExportCount++
+                        Write-Verbose "Exported: $FileName ($($Chain.Events.Count) events)"
+                    }
+                }
+                catch {
+                    Write-Warning "Failed to export chain $($Chain.TaskID): $($_.Exception.Message)"
+                }
+            }
+            
+            Write-Host "$(Get-DisplayChar 'Checkmark') Exported $ExportCount error chain(s) to $ExportPath" -ForegroundColor Green
+        }
+        
+        return $ChainSummary
+    }
+}
+
 #endregion
 
 #region Aliases
@@ -3011,6 +3347,7 @@ function Stop-CAPI2Troubleshooting {
 # Create friendly aliases for common commands
 New-Alias -Name 'Find-CertEvents' -Value 'Find-CapiEventsByName' -Description 'Alias for Find-CapiEventsByName'
 New-Alias -Name 'Get-CertChain' -Value 'Get-CapiTaskIDEvents' -Description 'Alias for Get-CapiTaskIDEvents'
+New-Alias -Name 'Get-AllErrors' -Value 'Get-CapiAllErrors' -Description 'Alias for Get-CapiAllErrors'
 New-Alias -Name 'Enable-CapiLog' -Value 'Enable-CAPI2EventLog' -Description 'Alias for Enable-CAPI2EventLog'
 New-Alias -Name 'Disable-CapiLog' -Value 'Disable-CAPI2EventLog' -Description 'Alias for Disable-CAPI2EventLog'
 New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias for Clear-CAPI2EventLog'
@@ -3018,11 +3355,11 @@ New-Alias -Name 'Clear-CapiLog' -Value 'Clear-CAPI2EventLog' -Description 'Alias
 #endregion
 
 # Export module members
-Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Convert-EventLogRecord, Format-XML, `
+Export-ModuleMember -Function Find-CapiEventsByName, Get-CapiTaskIDEvents, Get-CapiAllErrors, Convert-EventLogRecord, Format-XML, `
     Enable-CAPI2EventLog, Disable-CAPI2EventLog, Clear-CAPI2EventLog, Get-CAPI2EventLogStatus, `
     Get-CapiErrorAnalysis, Export-CapiEvents, Compare-CapiEvents, Get-CAPI2ErrorDetails, `
     Get-CapiCertificateReport, Start-CAPI2Troubleshooting, Stop-CAPI2Troubleshooting `
-    -Alias 'Find-CertEvents', 'Get-CertChain', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
+    -Alias 'Find-CertEvents', 'Get-CertChain', 'Get-AllErrors', 'Enable-CapiLog', 'Disable-CapiLog', 'Clear-CapiLog'
 
 <#
 .NOTES
