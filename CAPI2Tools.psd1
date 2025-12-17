@@ -46,6 +46,7 @@ Features:
         # Search and Retrieval
         'Find-CapiEventsByName',
         'Get-CapiTaskIDEvents',
+        'Get-CapiAllErrors',
         
         # Analysis
         'Get-CapiErrorAnalysis',
@@ -77,6 +78,7 @@ Features:
     AliasesToExport      = @(
         'Find-CertEvents',
         'Get-CertChain',
+        'Get-AllErrors',
         'Enable-CapiLog',
         'Disable-CapiLog',
         'Clear-CapiLog'
