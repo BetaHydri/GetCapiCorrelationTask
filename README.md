@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.13.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.13.0-blue.svg)](https://github.com/BetaHydri/CAPI2Tools)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
