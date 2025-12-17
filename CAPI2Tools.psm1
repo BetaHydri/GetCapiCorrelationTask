@@ -2411,8 +2411,18 @@ $CertInfoHtml
         <li><strong>Use Correlation Chain:</strong> Review all events in the chain below to understand the validation flow</li>
     </ol>
     <p><strong>PowerShell Commands for Troubleshooting:</strong></p>
-    <pre>Get-CapiErrorAnalysis -Events `$Events -IncludeSummary
+    <pre># Get events for this specific TaskID
+`$Events = Get-CapiTaskIDEvents -TaskID "$TaskID"
+
+# Analyze errors with detailed information
+Get-CapiErrorAnalysis -Events `$Events -IncludeSummary
+
+# Compare before/after fixing issues
+`$Before = Get-CapiTaskIDEvents -TaskID "GUID-BEFORE"
+`$After = Get-CapiTaskIDEvents -TaskID "GUID-AFTER"
 Compare-CapiEvents -ReferenceEvents `$Before -DifferenceEvents `$After
+
+# Check CAPI2 logging status
 Get-CAPI2EventLogStatus</pre>
 </div>
 "@
