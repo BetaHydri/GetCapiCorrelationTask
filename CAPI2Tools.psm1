@@ -3199,7 +3199,7 @@ function Get-CapiAllErrors {
         $AllEvents = Get-WinEvent -FilterHashtable $FilterHash -MaxEvents $MaxEvents -ErrorAction Stop
     }
     catch {
-        Write-Host "$(Get-DisplayChar 'Cross') No CAPI2 events found or error accessing log: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "$(Get-DisplayChar 'Warning') No CAPI2 events found or error accessing log: $($_.Exception.Message)" -ForegroundColor Red
         return
     }
     
