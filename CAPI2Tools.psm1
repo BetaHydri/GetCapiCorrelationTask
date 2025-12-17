@@ -2734,7 +2734,7 @@ function Get-CapiCertificateReport {
         [int]$Hours = 24,
         
         [Parameter(Mandatory = $false)]
-        [int]$MaxEvents = 10,
+        [int]$MaxEvents = 1000,
         
         [Parameter(Mandatory = $false)]
         [switch]$ShowDetails,
