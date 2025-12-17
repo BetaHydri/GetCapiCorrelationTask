@@ -1,6 +1,6 @@
 # CAPI2 Event Log Correlation Toolkit
 
-[![Version](https://img.shields.io/badge/version-2.12.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
+[![Version](https://img.shields.io/badge/version-2.13.0-blue.svg)](https://github.com/BetaHydri/GetCapiCorrelationTask)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -44,7 +44,7 @@ A powerful PowerShell toolkit for analyzing Windows CAPI2 (Cryptographic API) ev
 
 The CAPI2 Event Log Correlation Toolkit simplifies the complex task of analyzing certificate validation chains in Windows. When applications establish secure connections (TLS/SSL), Windows logs detailed cryptographic operations to the CAPI2 event log. These events are correlated using a TaskID (GUID), but finding the right correlation chain traditionally required manual searching.
 
-**Version 2.12.0** adds X.509 certificate information display from Event 90, showing DNS SANs, UPNs, and certificate details at the top of each correlation report.
+**Version 2.13.0** adds intelligent multi-chain summary detection when piping multiple correlation chains to `Get-CapiErrorAnalysis`, comprehensive wildcard search documentation, and automatic duplicate prevention in summary tables.
 
 ### Understanding CAPI2 Event Correlation
 
@@ -78,6 +78,28 @@ Same certificate validated 3 times:
 
 Using **chainRef** would mix all 9 events together with duplicate sequence numbers.  
 Using **TaskId** gives you 3 separate chains with correct sequences (1,2,3 for each).
+
+### What's New in v2.13.0
+
+- 📊 **Multi-Chain Summary Mode**: Automatic detection when 2+ chains are piped to `Get-CapiErrorAnalysis`
+- 📋 **Summary Table**: Clean overview showing TaskID, Certificate, Event Count, Error Count, and Error Types
+- 🔄 **Duplicate Prevention**: Unique TaskID filtering prevents duplicate entries in summary tables
+- 🌐 **Wildcard Search Guide**: Comprehensive "Working with Wildcard Searches and Bulk Operations" documentation
+- 🎯 **Four Approaches**: Documented strategies for handling 1-5, 5-20, 20+ chains with examples
+- ⚡ **Performance Tips**: Guidance on narrowing time windows, limiting events, and filtering early
+- 📖 **Quick Reference**: Decision table for choosing the right analysis approach based on result count
+- ☀ **Visual Indicators**: Lightbulb symbol for summary mode with helpful guidance messages
+
+### What's New in v2.13.0
+
+- 📊 **Multi-Chain Summary Mode**: Automatic detection when 2+ chains are piped to `Get-CapiErrorAnalysis`
+- 📋 **Summary Table**: Clean overview showing TaskID, Certificate, Event Count, Error Count, and Error Types
+- 🔄 **Duplicate Prevention**: Unique TaskID filtering prevents duplicate entries in summary tables
+- 🌐 **Wildcard Search Guide**: Comprehensive "Working with Wildcard Searches and Bulk Operations" documentation
+- 🎯 **Four Approaches**: Documented strategies for handling 1-5, 5-20, 20+ chains with examples
+- ⚡ **Performance Tips**: Guidance on narrowing time windows, limiting events, and filtering early
+- 📖 **Quick Reference**: Decision table for choosing the right analysis approach based on result count
+- ☀ **Visual Indicators**: Lightbulb symbol for summary mode with helpful guidance messages
 
 ### What's New in v2.12.0
 
@@ -2555,6 +2577,7 @@ See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.13.0 | December 2025 | Intelligent multi-chain summary detection in Get-CapiErrorAnalysis, automatic summary table for 2+ piped chains, duplicate TaskID prevention, comprehensive wildcard search documentation section, performance tips for bulk operations, four documented approaches for handling multiple chains, quick reference table for choosing analysis method |
 | 2.12.0 | December 2025 | X.509 Certificate Information display from Event 90, Subject Alternative Names (DNS, UPN, Email), smart end-entity certificate selection, enhanced HTML reports with certificate details section, 25+ CAPI2 Event IDs mapped (CRL Retrieval, CTL Operations, Network Retrieval), TaskID format normalization, robust XML namespace handling |
 | 2.11.0 | December 2025 | Event chain display with `-ShowEventChain` parameter, AuxInfo sequence numbers for chronological ordering, Task Categories (Build Chain, X509 Objects, Verify Chain Policy), complete event visibility with all Event IDs, automatic event chain tables in HTML exports |
 | 2.10.1 | December 2025 | Event ID 82 support (catalog lookup failures), 13 new error codes (ERROR_NOT_FOUND, CERT_E_PURPOSE, SEC_E_WRONG_PRINCIPAL, TRUST_E_BAD_DIGEST, etc.), certificate thumbprint extraction and display, enhanced enterprise diagnostics |
