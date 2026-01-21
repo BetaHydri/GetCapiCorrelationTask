@@ -70,9 +70,9 @@ Same certificate validated 3 times:
 ┌─────────────────────────────────────────────────┐
 │ chainRef: {2F129E54-6A14-43CC-BF14-841FED3F18FD}│ ← Same for all
 │                                                 │
-│ Validation 1: TaskId {09E9E471...} Seq 1,2,3   │
-│ Validation 2: TaskId {369F9629...} Seq 1,2,3   │
-│ Validation 3: TaskId {68D4D2FD...} Seq 1,2,3   │
+│ Validation 1: TaskId {09E9E471...} Seq 1,2,3    │
+│ Validation 2: TaskId {369F9629...} Seq 1,2,3    │
+│ Validation 3: TaskId {68D4D2FD...} Seq 1,2,3    │
 └─────────────────────────────────────────────────┘
 ```
 
